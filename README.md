@@ -16,6 +16,18 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### Start on LAN (serve to other devices on your network)
+
+Run the development server bound to all network interfaces:
+
+```bash
+npm run dev:lan
+# or for production-like server
+npm run start:lan
+```
+
+The dev server will print a `Network` URL (e.g. `http://192.168.x.y:3000`) you can open from other devices on the same LAN.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
