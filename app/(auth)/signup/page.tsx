@@ -47,7 +47,38 @@ export default function SignupPage() {
       return;
     }
 
-    // If email confirmations are enabled, session may be null. Still route to home.
+    // Try to create a matching `profiles` row if we can get the user id (session may be null when email confirm is required)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.data?.session?.user?.id ?? null;
+
+      // If no session (email confirm flows), attempt to read `data.user` from the auth response via getUser()
+      let uid = userId;
+      if (!uid) {
+        const { data: userRes } = await supabase.auth.getUser();
+        uid = userRes?.data?.user?.id ?? uid;
+      }
+
+      if (uid) {
+        // Ensure username not taken
+        const { data: existing } = await supabase.from("profiles").select("id").eq("username", cleanUsername).maybeSingle();
+        if (existing) {
+          setError("Username already taken. Please pick another.");
+          return;
+        }
+
+        const { error: profileErr } = await supabase.from("profiles").upsert([
+          { id: uid, username: cleanUsername, display_name: displayName.trim() || null },
+        ]);
+        if (profileErr) {
+          console.warn("profile upsert error", profileErr.message);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not create profile automatically", e);
+    }
+
+    // Route to home — if email confirmation is required the user will need to confirm first.
     router.push("/");
     router.refresh();
   }

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { MagneticText } from "@/components/ui/morphing-cursor";
+import { Typewriter } from "@/components/ui/typewriter-text";
 
 const featured = [
 	{
@@ -51,15 +53,17 @@ export default function Home() {
 					</div>
 
 					<h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-5xl">
-						Build your next team with{" "}
-						<span className="text-yellow-500">people who fit</span>.
+						<MagneticText text="Find the right people" hoverText="Build the right team" className="inline-block" />
 					</h1>
 
-					<p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 sm:text-base">
-						TeamUp helps you find the right teammates using skills, interests,
-						and your network. Follow profiles, explore communities, and chat
-						1:1 or in groups.
-					</p>
+					<div className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 sm:text-base">
+						{/* Typewriter effect for the new sentence */}
+						<Typewriter
+							text="Build teams smarter using skills, interests, and your network."
+							speed={60}
+							className="inline-block"
+						/>
+					</div>
 
 					<div className="mt-6 flex flex-wrap items-center gap-3">
 						<Link

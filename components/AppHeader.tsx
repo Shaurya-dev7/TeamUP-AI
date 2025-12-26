@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Home, Bell, Settings, HelpCircle, Shield } from "lucide-react";
+import { ExpandableTabs } from "@/components/ui/expandable-tabs";
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
