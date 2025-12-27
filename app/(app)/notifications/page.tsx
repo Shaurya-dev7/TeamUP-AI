@@ -41,7 +41,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     (async () => {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.data?.session?.user?.id;
+      const userId = (sessionData as any)?.data?.session?.user?.id;
       if (!userId) return;
       // Fetch profile_events for this user
       const { data: events } = await supabase

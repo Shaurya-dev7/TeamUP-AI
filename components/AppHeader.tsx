@@ -7,10 +7,11 @@ import { ExpandableTabs } from "@/components/ui/expandable-tabs";
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { getInitialSession, subscribeToAuthChanges, fetchProfileUsername, signOut } from "@/services/auth";
 import ThemeToggle from "./ThemeToggle";
 
 function NavLink({ href, label }: { href: string; label: string }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '/';
   const active =
     pathname === href || (href !== "/" && pathname.startsWith(href));
 
@@ -38,18 +39,17 @@ export default function AppHeader() {
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe: (() => void) | undefined;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data.session ?? null);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-    });
+    (async () => {
+      const s = await getInitialSession(supabase);
+      if (mounted) setSession(s);
+      unsubscribe = subscribeToAuthChanges(supabase, (next) => setSession(next));
+    })();
 
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, [supabase]);
 
@@ -62,16 +62,8 @@ export default function AppHeader() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (!cancelled) {
-        if (error) setProfileUsername(null);
-        else setProfileUsername(data?.username ?? null);
-      }
+      const username = await fetchProfileUsername(supabase, session.user.id);
+      if (!cancelled) setProfileUsername(username);
     }
 
     void loadUsername();
@@ -81,7 +73,7 @@ export default function AppHeader() {
   }, [session?.user?.id, supabase]);
 
   async function onLogout() {
-    await supabase.auth.signOut();
+    await signOut(supabase);
     router.push("/login");
     router.refresh();
   }

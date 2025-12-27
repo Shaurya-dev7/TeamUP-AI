@@ -15,6 +15,7 @@ type Profile = {
   following_count?: number;
   match_count?: number;
   matching_interests?: string[];
+  matching_interests_count?: number;
   is_following?: boolean;
 };
 
@@ -25,6 +26,9 @@ export default function DiscoverPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Use hero as background
+  const Hero = require("@/components/ui/shape-landing-hero").HeroGeometric;
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasInterests, setHasInterests] = useState(false);
@@ -48,7 +52,7 @@ export default function DiscoverPage() {
           .select("username")
           .eq("id", userId)
           .maybeSingle();
-        if (mounted) setSessionUsername(profile?.username || null);
+        if (mounted) setSessionUsername((profile as any)?.username || null);
       }
     };
     fetchSession();
@@ -213,7 +217,7 @@ export default function DiscoverPage() {
     }
 
     try {
-      await supabase.from("follows").insert([{ follower_id: sessionUserId, following_id: profileId }]);
+      await (supabase as any).from("follows").insert([{ follower_id: sessionUserId, following_id: profileId }]);
       setFollowingMap((prev) => new Map(prev).set(profileId, true));
       // Update followers count
       setProfiles((prev) =>
@@ -231,7 +235,7 @@ export default function DiscoverPage() {
     if (!sessionUserId) return;
 
     try {
-      await supabase
+      await (supabase as any)
         .from("follows")
         .delete()
         .eq("follower_id", sessionUserId)
@@ -257,7 +261,11 @@ export default function DiscoverPage() {
   const isSearchMode = searchQuery.trim().length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      <div className="absolute inset-0 -z-10 pointer-events-none">
+        <Hero badge="TeamUp" title1="Find your dream teammates" title2="Build projects together" />
+      </div>
+      <div className="space-y-6 relative z-10">
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div>
@@ -510,6 +518,7 @@ export default function DiscoverPage() {
           to see personalized recommendations and follow users.
         </div>
       )}
+    </div>
     </div>
   );
 }

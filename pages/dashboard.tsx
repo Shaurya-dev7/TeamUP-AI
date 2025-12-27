@@ -31,6 +31,9 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<any[]>([]);
   const [followed, setFollowed] = useState(false);
   const [discoverProfiles, setDiscoverProfiles] = useState<Profile[]>([]);
+  const [followersList, setFollowersList] = useState<Profile[]>([]);
+  const [followingList, setFollowingList] = useState<Profile[]>([]);
+  const [interestsList, setInterestsList] = useState<string[]>([]);
   // Load general discover suggestions on mount
   useEffect(() => {
     async function fetchDiscover() {
@@ -111,7 +114,7 @@ export default function Dashboard() {
       if (res.ok) {
         setFollowed(true);
         // Optionally append the current user to followers list locally
-        setFollowersList(prev => prev.concat([{ id: userId, username: 'you', display_name: 'You', avatar_url: null }]));
+        setFollowersList(prev => prev.concat([{ id: userId, username: 'you', display_name: 'You', avatar_url: undefined }]));
       }
     } else {
       const res = await fetch('/api/follow', {
@@ -158,7 +161,7 @@ export default function Dashboard() {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={handleSearch}>
+          <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={() => handleSearch()}>
             Search
           </button>
         </div>

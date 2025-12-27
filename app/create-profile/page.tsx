@@ -31,7 +31,7 @@ export default function CreateProfilePage() {
     setError(null);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.data?.session?.user?.id;
+      const userId = (sessionData as any)?.data?.session?.user?.id;
       if (!userId) {
         setError("You must be logged in to create a profile.");
         setLoading(false);
@@ -44,7 +44,7 @@ export default function CreateProfilePage() {
         setLoading(false);
         return;
       }
-      const { error: profileErr } = await supabase.from("profiles").upsert([
+      const { error: profileErr } = await (supabase as any).from("profiles").upsert([
         {
           id: userId,
           username,

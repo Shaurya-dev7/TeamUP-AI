@@ -20,7 +20,7 @@ function Tag({ children }: { children: string }) {
 
 export default function ProfilePage() {
   const supabase = useMemo(() => createClient(), []);
-  const { username } = useParams();
+  const { username } = useParams() as { username?: string };
   const [profile, setProfile] = useState<any>(null);
   const [skills, setSkills] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
@@ -80,28 +80,28 @@ export default function ProfilePage() {
   useEffect(() => {
     (async () => {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.data?.session?.user?.id ?? null;
+      const userId = (sessionData as any)?.data?.session?.user?.id ?? null;
       setSessionUserId(userId);
       // fetch profile
-      const { data: p } = await supabase.from("profiles").select("id,display_name,bio,workplace,education,availability_status").eq("username", username).maybeSingle();
+      const { data: p } = await (supabase as any).from("profiles").select("id,display_name,bio,workplace,education,availability_status").eq("username", username).maybeSingle();
       setProfile(p);
       // skills
-      const { data: skillRows } = await supabase.from("profile_skills").select("skills(name)").eq("profile_id", p?.id);
+      const { data: skillRows } = await (supabase as any).from("profile_skills").select("skills(name)").eq("profile_id", (p as any)?.id);
       setSkills((skillRows || []).map((r: any) => r.skills?.name).filter(Boolean));
       // interests
-      const { data: interestRows } = await supabase.from("profile_interests").select("interests(name)").eq("profile_id", p?.id);
+      const { data: interestRows } = await (supabase as any).from("profile_interests").select("interests(name)").eq("profile_id", (p as any)?.id);
       setInterests((interestRows || []).map((r: any) => r.interests?.name).filter(Boolean));
       // followers/following
-      const { count: followersCount } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", p?.id);
+      const { count: followersCount } = await (supabase as any).from("follows").select("*", { count: "exact", head: true }).eq("following_id", (p as any)?.id);
       setFollowers(followersCount || 0);
-      const { count: followingCount } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", p?.id);
+      const { count: followingCount } = await (supabase as any).from("follows").select("*", { count: "exact", head: true }).eq("follower_id", (p as any)?.id);
       setFollowing(followingCount || 0);
       // is following
-      if (userId && p?.id) {
-        const { data: f } = await supabase.from("follows").select("*").eq("follower_id", userId).eq("following_id", p.id).maybeSingle();
+      if (userId && (p as any)?.id) {
+        const { data: f } = await (supabase as any).from("follows").select("*").eq("follower_id", userId).eq("following_id", (p as any).id).maybeSingle();
         setIsFollowing(!!f);
         // mutuals
-        const { data: mutualRows } = await supabase.rpc("get_mutual_connections", { user1: userId, user2: p.id });
+        const { data: mutualRows } = await (supabase as any).rpc("get_mutual_connections", { user1: userId, user2: (p as any).id });
         setMutuals(mutualRows?.count || 0);
       }
     })();
@@ -109,13 +109,13 @@ export default function ProfilePage() {
 
   const handleFollow = async () => {
     if (!sessionUserId || !profile?.id) return;
-    await supabase.from("follows").insert([{ follower_id: sessionUserId, following_id: profile.id }]);
+    await (supabase as any).from("follows").insert([{ follower_id: sessionUserId, following_id: profile.id }]);
     setIsFollowing(true);
     setFollowers((f) => f + 1);
   };
   const handleUnfollow = async () => {
     if (!sessionUserId || !profile?.id) return;
-    await supabase.from("follows").delete().eq("follower_id", sessionUserId).eq("following_id", profile.id);
+    await (supabase as any).from("follows").delete().eq("follower_id", sessionUserId).eq("following_id", profile.id);
     setIsFollowing(false);
     setFollowers((f) => Math.max(0, f - 1));
   };
@@ -143,7 +143,7 @@ export default function ProfilePage() {
                     value={profile.availability_status || "Available"}
                     onChange={async (e) => {
                       const val = e.target.value;
-                      await supabase.from("profiles").update({ availability_status: val }).eq("id", profile.id);
+                      await (supabase as any).from("profiles").update({ availability_status: val }).eq("id", profile.id);
                       setProfile((p: any) => ({ ...p, availability_status: val }));
                     }}
                   >
@@ -152,7 +152,7 @@ export default function ProfilePage() {
                     <option value="Looking for team">Looking for team</option>
                   </select>
                 ) : (
-                  <Tag>Available: {profile.availability_status || "Yes"}</Tag>
+                  <Tag>{String(profile.availability_status || "Yes")}</Tag>
                 )}
               </div>
             </div>

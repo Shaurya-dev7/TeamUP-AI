@@ -50,13 +50,13 @@ export default function SignupPage() {
     // Try to create a matching `profiles` row if we can get the user id (session may be null when email confirm is required)
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.data?.session?.user?.id ?? null;
+      const userId = (sessionData as any)?.data?.session?.user?.id ?? null;
 
       // If no session (email confirm flows), attempt to read `data.user` from the auth response via getUser()
       let uid = userId;
       if (!uid) {
         const { data: userRes } = await supabase.auth.getUser();
-        uid = userRes?.data?.user?.id ?? uid;
+        uid = (userRes as any)?.data?.user?.id ?? uid;
       }
 
       if (uid) {
@@ -67,7 +67,7 @@ export default function SignupPage() {
           return;
         }
 
-        const { error: profileErr } = await supabase.from("profiles").upsert([
+        const { error: profileErr } = await (supabase as any).from("profiles").upsert([
           { id: uid, username: cleanUsername, display_name: displayName.trim() || null },
         ]);
         if (profileErr) {

@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Parse user's skills
-  const user_skills = (userProfile.skills || '').split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  const user_skills = (userProfile.skills || '').split(/[,;]+/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
   if (!user_skills.length) {
     return res.status(200).json({ team: [], message: 'No skills found for user. Add skills to your profile for better team suggestions.' });
   }
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Determine user role
   let user_role = null;
   for (const [role, keywords] of Object.entries(role_skills)) {
-    if (user_skills.some(skill => keywords.some(kw => skill && skill.includes(kw)))) {
+    if (user_skills.some((skill: string) => keywords.some(kw => skill && skill.includes(kw)))) {
       user_role = role;
       break;
     }
@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const theirSkills = (p.skills || '').split(/[,;]+/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
       const overlap = theirSkills.filter((s: string) => keywords.includes(s));
       return { ...p, skills: theirSkills, score: overlap.length };
-    }).filter(p => p.score > 0);
+    }).filter((p: any) => p.score > 0);
     return scored.sort((a, b) => b.score - a.score).slice(0, top_n);
   }
 

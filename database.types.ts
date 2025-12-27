@@ -89,6 +89,76 @@ export type Database = {
           },
         ]
       }
+      /* Notifications table is used by the app to notify users (added to schema but not always present in migrations). */
+      notifications: {
+        Row: {
+          id: number
+          user_id: string
+          type: string
+          data: string
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          type: string
+          data: string
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          type?: string
+          data?: string
+          read?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      /* Typing indicator table used by chat (may be optional in some deployments) */
+      chat_typing: {
+        Row: {
+          chat_id: string
+          profile_id: string
+          created_at: string
+        }
+        Insert: {
+          chat_id: string
+          profile_id: string
+          created_at?: string
+        }
+        Update: {
+          chat_id?: string
+          profile_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_typing_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_typing_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chats: {
         Row: {
           created_at: string
@@ -320,6 +390,11 @@ export type Database = {
           id: string
           updated_at: string
           username: string
+          // Added in migration 20251226_add_is_demo_to_profiles.sql
+          is_demo: boolean
+          // Optional legacy fields used as fallbacks in some UI mappings
+          name?: string | null
+          full_name?: string | null
         }
         Insert: {
           availability_status?: string | null
@@ -330,6 +405,9 @@ export type Database = {
           id: string
           updated_at?: string
           username: string
+          is_demo?: boolean
+          name?: string | null
+          full_name?: string | null
         }
         Update: {
           availability_status?: string | null
@@ -340,6 +418,9 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string
+          is_demo?: boolean
+          name?: string | null
+          full_name?: string | null
         }
         Relationships: []
       }

@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/database.types';
+
 type Profile = {
   id: string;
   username: string;
@@ -25,7 +28,7 @@ type Message = {
 };
 
 export default function ChatPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []) as unknown as ReturnType<typeof createClient>;
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
@@ -130,7 +133,7 @@ export default function ChatPage() {
       if (error) {
         console.error("load chats error", error);
       } else if (rows) {
-        const mapped: Chat[] = rows.map((r: any) => r.chats || { id: r.chat_id, title: null, is_group: false });
+        const mapped: Chat[] = (rows as any[]).map((r: any) => r.chats || { id: r.chat_id, title: null, is_group: false });
         setChats(mapped);
       }
     };
@@ -190,7 +193,7 @@ export default function ChatPage() {
               if (!profileMap[msg.sender_id]) {
                 try {
                   const { data: p } = await supabase.from("profiles").select("id,display_name").eq("id", msg.sender_id).maybeSingle();
-                  if (p) setProfileMap((m) => ({ ...m, [p.id]: { display_name: p.display_name } }));
+                  if (p) { const pp = p as any; setProfileMap((m) => ({ ...m, [pp.id]: { display_name: pp.display_name } })); }
                 } catch (e) {
                   console.warn("failed to fetch profile for message sender", e);
                 }
@@ -261,9 +264,9 @@ export default function ChatPage() {
     const content = input.trim();
     setInput("");
     // Insert message
-    const { error } = await supabase.from("chat_messages").insert([
+    const { error } = await (supabase as any).from("chat_messages").insert([
       { chat_id: selectedChat.id, sender_id: sessionUserId, content },
-    ]);
+    ] as any);
     if (error) {
       console.error("send message error", error);
       return;
@@ -277,15 +280,15 @@ export default function ChatPage() {
       const recipient = members.find((m: any) => m.profile_id !== sessionUserId);
       if (recipient) {
         // Insert notification for recipient
-        await supabase.from("notifications").insert([
+        await (supabase as any).from("notifications").insert([
           {
-            user_id: recipient.profile_id,
+            user_id: (recipient as any).profile_id,
             type: "chat_message",
             data: JSON.stringify({ chat_id: selectedChat.id, sender_id: sessionUserId, content }),
             read: false,
             created_at: new Date().toISOString(),
           },
-        ]);
+        ] as any);
       }
     }
   };
@@ -295,19 +298,19 @@ export default function ChatPage() {
   const handleStartChatWithProfile = async (profile: Profile) => {
     if (!sessionUserId || !profile.id) return;
     // Find existing 1:1 chat between these two users
-    let chatId = null;
+    let chatId: string | null = null;
     const { data: existingChats } = await supabase
       .from("chat_members")
       .select("chat_id")
       .eq("profile_id", sessionUserId);
     if (existingChats && existingChats.length) {
-      for (const row of existingChats) {
+      for (const row of (existingChats as any[])) {
         // Check if this chat is a 1:1 chat with the selected user
         const { data: members } = await supabase
           .from("chat_members")
           .select("profile_id")
           .eq("chat_id", row.chat_id);
-        if (members && members.length === 2 && members.some((m: any) => m.profile_id === profile.id)) {
+        if (members && members.length === 2 && (members as any[]).some((m: any) => m.profile_id === profile.id)) {
           chatId = row.chat_id;
           break;
         }
@@ -315,20 +318,20 @@ export default function ChatPage() {
     }
     if (!chatId) {
       // Create new chat and add both users
-      const { data: chatData, error: cErr } = await supabase.from("chats").insert([{ is_group: false }]).select("id").single();
+      const { data: chatData, error: cErr } = await (supabase as any).from("chats").insert([{ is_group: false } as any]).select("id").single();
       if (cErr || !chatData) {
         alert("Failed to create chat");
         return;
       }
-      chatId = chatData.id;
-      await supabase.from("chat_members").insert([
-        { chat_id: chatId, profile_id: sessionUserId },
-        { chat_id: chatId, profile_id: profile.id },
-      ]);
-      setChats((c) => [...c, { id: chatId, is_group: false }]);
+      chatId = (chatData as any).id;
+      await (supabase as any).from("chat_members").insert([
+        { chat_id: chatId, profile_id: sessionUserId } as any,
+        { chat_id: chatId, profile_id: profile.id } as any,
+      ] as any);
+      if (chatId) setChats((c) => [...c, { id: chatId as string, is_group: false }]);
     }
     // Always select the chat
-    setSelectedChat({ id: chatId, is_group: false });
+    if (chatId) setSelectedChat({ id: chatId as string, is_group: false });
     setProfileQuery("");
     setProfileResults([]);
   };
@@ -338,9 +341,10 @@ export default function ChatPage() {
     if (!selectedChat || !sessionUserId) return;
     try {
       if (isTyping) {
-        await supabase.from("chat_typing").upsert([{ chat_id: selectedChat.id, profile_id: sessionUserId }], { onConflict: ["chat_id", "profile_id"] });
+        // upsert accepts a single object or array; pass a single object to satisfy typing
+        await (supabase as any).from("chat_typing").upsert({ chat_id: selectedChat.id, profile_id: sessionUserId }, { onConflict: ["chat_id", "profile_id"] });
       } else {
-        await supabase.from("chat_typing").delete().match({ chat_id: selectedChat.id, profile_id: sessionUserId });
+        await (supabase as any).from("chat_typing").delete().match({ chat_id: selectedChat.id, profile_id: sessionUserId });
       }
     } catch (e) {
       // table may not exist or permission denied — ignore
@@ -364,9 +368,7 @@ export default function ChatPage() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Chat</h1>
-              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-                1:1 and group chats — real-time powered by Supabase.
-              </p>
+              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">1:1 and group chats — real-time powered by Supabase.</p>
             </div>
           </div>
           {/* Profile search bar */}
@@ -424,7 +426,6 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
-
       <div className="lg:col-span-7">
         <div className="flex h-full min-h-[420px] flex-col rounded-3xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
           <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-800">
@@ -444,14 +445,14 @@ export default function ChatPage() {
             <div className="space-y-3">
               {messages.map((m) => (
                 <div key={m.id} className="rounded-lg border px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`h-8 w-8 flex-shrink-0 grid place-items-center rounded-full text-sm font-semibold ${m.sender_id === sessionUserId ? "bg-yellow-400 text-neutral-950" : "bg-neutral-950 text-yellow-400 dark:bg-white dark:text-neutral-950"}`}>
-                          {((profileMap[m.sender_id]?.display_name || m.sender_id) + "").split(" ").slice(0, 2).map((w:any)=>w[0]).join("")}
-                        </div>
-                        <div className="text-xs text-neutral-500">{profileMap[m.sender_id]?.display_name || m.sender_id}</div>
-                      </div>
-                      <div className={`mt-1 text-sm ${m.sender_id === sessionUserId ? "text-right" : "text-left"}`}>{m.content}</div>
-                      <div className="mt-1 text-xs text-neutral-400">{new Date(m.created_at).toLocaleString()}</div>
+                  <div className="flex items-center gap-2">
+                    <div className={`h-8 w-8 flex-shrink-0 grid place-items-center rounded-full text-sm font-semibold ${m.sender_id === sessionUserId ? "bg-yellow-400 text-neutral-950" : "bg-neutral-950 text-yellow-400 dark:bg-white dark:text-neutral-950"}`}>
+                      {((profileMap[m.sender_id]?.display_name || m.sender_id) + "").split(" ").slice(0, 2).map((w:any)=>w[0]).join("")}
+                    </div>
+                    <div className="text-xs text-neutral-500">{profileMap[m.sender_id]?.display_name || m.sender_id}</div>
+                  </div>
+                  <div className={`mt-1 text-sm ${m.sender_id === sessionUserId ? "text-right" : "text-left"}`}>{m.content}</div>
+                  <div className="mt-1 text-xs text-neutral-400">{new Date(m.created_at).toLocaleString()}</div>
                 </div>
               ))}
               {!messages.length && (
@@ -482,16 +483,16 @@ export default function ChatPage() {
               >
                 Send
               </button>
-                  {/* Show login message if not authenticated */}
-                  {!sessionUserId && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                      <div className="rounded-2xl bg-white p-8 shadow-xl text-center">
-                        <h2 className="text-xl font-bold mb-2">Sign in required</h2>
-                        <p className="text-neutral-700 mb-4">You must be logged in to use chat and search. Please sign in from the profile menu.</p>
-                        <a href="/login" className="inline-block rounded-xl bg-yellow-400 px-4 py-2 text-sm font-semibold text-neutral-950 shadow hover:bg-yellow-300">Go to Login</a>
-                      </div>
-                    </div>
-                  )}
+              {/* Show login message if not authenticated */}
+              {!sessionUserId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                  <div className="rounded-2xl bg-white p-8 shadow-xl text-center">
+                    <h2 className="text-xl font-bold mb-2">Sign in required</h2>
+                    <p className="text-neutral-700 mb-4">You must be logged in to use chat and search. Please sign in from the profile menu.</p>
+                    <a href="/login" className="inline-block rounded-xl bg-yellow-400 px-4 py-2 text-sm font-semibold text-neutral-950 shadow hover:bg-yellow-300">Go to Login</a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -9,14 +9,14 @@ import { createClient } from '@supabase/supabase-js';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const results: any = {
-    timestamp: new Date().toISOString(),
-    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-  };
-
   try {
+    const results: any = {
+      timestamp: new Date().toISOString(),
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    };
+
     // Test with service role key - use * to see all columns
     const serviceClient = createServiceClient();
     const { data: serviceProfiles, error: serviceError, count: serviceCount } = await serviceClient
@@ -60,11 +60,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     results.tableStructure = tableInfo && tableInfo.length > 0 ? Object.keys(tableInfo[0]) : [];
 
-  } catch (error: any) {
-    results.error = error.message;
-    results.stack = error.stack;
+    res.json(results);
+  } catch (err: any) {
+    console.error('debug-profiles handler error:', err);
+    return res.status(500).json({ error: err?.message || 'Internal server error' });
   }
-
-  res.json(results);
 }
 
