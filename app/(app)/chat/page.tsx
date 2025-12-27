@@ -40,7 +40,7 @@ export default function ChatPage() {
   const [profileQuery, setProfileQuery] = useState("");
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
-  // Profile search effect (reuse discover logic)
+  // Profile search effect - use the new search API
   useEffect(() => {
     if (!profileQuery.trim()) {
       setProfileResults([]);
@@ -48,23 +48,68 @@ export default function ChatPage() {
     }
     setSearching(true);
     let cancelled = false;
-    (async () => {
-      let query = supabase
-        .from("profiles")
-        .select("id,username,display_name,bio,avatar_url")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (profileQuery.trim()) {
-        query = query.or(
-          `username.ilike.%${profileQuery.trim()}%,display_name.ilike.%${profileQuery.trim()}%,bio.ilike.%${profileQuery.trim()}%`
-        );
+    
+    // Debounce search
+    const timeoutId = setTimeout(async () => {
+      try {
+        // First try exact username match via profile API (faster for exact matches)
+        const exactMatch = await fetch(`/api/profile?username=${encodeURIComponent(profileQuery.trim())}`);
+        if (exactMatch.ok) {
+          const exactBody = await exactMatch.json();
+          if (!cancelled && exactBody.profile) {
+            setProfileResults([{
+              id: exactBody.profile.id,
+              username: exactBody.profile.username,
+              display_name: exactBody.profile.display_name,
+              bio: exactBody.profile.bio,
+              avatar_url: exactBody.profile.avatar_url,
+            }]);
+            setSearching(false);
+            return;
+          }
+        }
+        
+        // Fallback to search API for partial matches
+        const resp = await fetch(`/api/search-profiles?q=${encodeURIComponent(profileQuery.trim())}&limit=20`);
+        if (resp.ok) {
+          const body = await resp.json();
+          if (!cancelled) {
+            setProfileResults((body.profiles || []).map((p: any) => ({
+              id: p.id,
+              username: p.username,
+              display_name: p.display_name,
+              bio: p.bio,
+              avatar_url: p.avatar_url,
+            })));
+            setSearching(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Search failed:", e);
       }
-      const { data } = await query;
-      if (!cancelled) setProfileResults(data || []);
-      setSearching(false);
-    })();
+
+      // Fallback to client-side search if API fails
+      if (!cancelled) {
+        let query = supabase
+          .from("profiles")
+          .select("id,username,display_name,bio,avatar_url")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (profileQuery.trim()) {
+          query = query.or(
+            `username.ilike.%${profileQuery.trim()}%,display_name.ilike.%${profileQuery.trim()}%,bio.ilike.%${profileQuery.trim()}%`
+          );
+        }
+        const { data } = await query;
+        if (!cancelled) setProfileResults(data || []);
+        setSearching(false);
+      }
+    }, 300);
+
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [profileQuery, supabase]);
 
@@ -338,19 +383,18 @@ export default function ChatPage() {
                 {searching && <div className="p-3 text-sm text-neutral-500">Searching...</div>}
                 {!searching && profileResults.length === 0 && <div className="p-3 text-sm text-neutral-500">No profiles found.</div>}
                 {profileResults.map((p) => (
-                  <button
-                    key={p.id}
-                    className="flex w-full items-center gap-3 px-4 py-2 hover:bg-yellow-50 dark:hover:bg-neutral-900"
-                    onClick={() => handleStartChatWithProfile(p)}
-                  >
-                    <div className="grid h-8 w-8 place-items-center rounded-xl bg-neutral-950 text-xs font-black text-yellow-400 dark:bg-white dark:text-neutral-950">
-                      {(p.display_name || p.username).split(" ").slice(0, 2).map((w: any) => w[0]).join("")}
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <div className="truncate text-sm font-semibold">{p.display_name || p.username} <span className="text-neutral-500 dark:text-neutral-400">@{p.username}</span></div>
-                      <div className="truncate text-xs text-neutral-600 dark:text-neutral-300">{p.bio}</div>
-                    </div>
-                  </button>
+                  <div key={p.id} className="flex w-full items-center gap-3 px-4 py-2 hover:bg-yellow-50 dark:hover:bg-neutral-900">
+                    <button className="flex items-center gap-3 min-w-0 flex-1 text-left" onClick={() => handleStartChatWithProfile(p)}>
+                      <div className="grid h-8 w-8 place-items-center rounded-xl bg-neutral-950 text-xs font-black text-yellow-400 dark:bg-white dark:text-neutral-950">
+                        {(p.display_name || p.username).split(" ").slice(0, 2).map((w: any) => w[0]).join("")}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold">{p.display_name || p.username} <span className="text-neutral-500 dark:text-neutral-400">@{p.username}</span></div>
+                        <div className="truncate text-xs text-neutral-600 dark:text-neutral-300">{p.bio}</div>
+                      </div>
+                    </button>
+                    <a href={`/profile/${p.username}`} className="ml-2 rounded-full border px-3 py-1 text-xs font-medium bg-white hover:bg-neutral-50">View</a>
+                  </div>
                 ))}
               </div>
             )}

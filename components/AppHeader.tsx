@@ -125,6 +125,17 @@ export default function AppHeader() {
             Profile
           </Link>
 
+          {/* Create your profile button for logged-in users without a profile */}
+          {session?.user && !profileUsername && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-400"
+              onClick={() => router.push("/create-profile")}
+            >
+              Create your profile
+            </button>
+          )}
+
           {session?.user ? (
             <button
               type="button"

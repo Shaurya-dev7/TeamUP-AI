@@ -48,6 +48,35 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
 
+  // modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'followers'|'following'|'none'>('none');
+  const [modalItems, setModalItems] = useState<any[]>([]);
+
+  const openModal = async (type: 'followers'|'following') => {
+    setModalType(type);
+    setModalOpen(true);
+    // fetch full list
+    if (!profile?.id) return;
+    if (type === 'followers') {
+      const { data: fLinks } = await supabase.from('follows').select('follower_id').eq('following_id', profile.id);
+      const ids = (fLinks || []).map((r: any) => r.follower_id).filter(Boolean);
+      const { data: rows } = ids.length ? await supabase.from('profiles').select('id,username,display_name,avatar_url').in('id', ids) : { data: [] };
+      setModalItems(rows || []);
+    } else {
+      const { data: fLinks } = await supabase.from('follows').select('following_id').eq('follower_id', profile.id);
+      const ids = (fLinks || []).map((r: any) => r.following_id).filter(Boolean);
+      const { data: rows } = ids.length ? await supabase.from('profiles').select('id,username,display_name,avatar_url').in('id', ids) : { data: [] };
+      setModalItems(rows || []);
+    }
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setModalType('none');
+    setModalItems([]);
+  };
+
   useEffect(() => {
     (async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -140,11 +169,44 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <Stat label="Followers" value={followers + ""} />
-          <Stat label="Following" value={following + ""} />
+          <button type="button" onClick={() => openModal('followers')} className="w-full text-left">
+            <Stat label="Followers" value={followers + ""} />
+          </button>
+          <button type="button" onClick={() => openModal('following')} className="w-full text-left">
+            <Stat label="Following" value={following + ""} />
+          </button>
           <Stat label="Mutual connections" value={mutuals + ""} />
         </div>
       </div>
+
+      {/* Modal for followers/following */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
+          <div className="relative max-w-xl w-full bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{modalType === 'followers' ? 'Followers' : 'Following'}</h3>
+              <button className="text-sm text-neutral-500" onClick={closeModal}>Close</button>
+            </div>
+            <div className="mt-4 max-h-72 overflow-y-auto">
+              {modalItems.length === 0 && <div className="text-sm text-neutral-500">No users to show.</div>}
+              {modalItems.map((u) => (
+                <div key={u.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-950 text-xs font-black text-yellow-400 grid place-items-center">{(u.display_name || u.username).split(' ').map((w: any)=>w[0]).slice(0,2).join('')}</div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{u.display_name || u.username} <span className="text-neutral-500 text-xs">@{u.username}</span></div>
+                  </div>
+                  <div className="ml-auto flex gap-2">
+                    <a href={`/profile/${u.username}`} className="rounded-full border px-3 py-1 text-xs">View</a>
+                    <a href="/chat" className="rounded-full border px-3 py-1 text-xs">Message</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
           <h2 className="text-base font-semibold">Skills</h2>
