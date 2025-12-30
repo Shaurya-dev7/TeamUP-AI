@@ -8,7 +8,12 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {}, // no themed colors mapped
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-jakarta)", "sans-serif"],
+        heading: ["var(--font-outfit)", "sans-serif"],
+      },
+    },
   },
   plugins: [],
 };

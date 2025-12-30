@@ -48,6 +48,7 @@ function genProfile(i) {
     workplace: pick(workplaces),
     bio: `Hi, I'm ${display_name}. I like ${interestset.join(', ')} and work on ${skillset.join(', ')}.`,
     created_at: new Date().toISOString(),
+    is_demo: true,
   }
 }
 

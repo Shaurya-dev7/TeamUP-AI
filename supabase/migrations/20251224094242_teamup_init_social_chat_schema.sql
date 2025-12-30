@@ -21,7 +21,7 @@ create table if not exists public.profiles (
   username citext not null unique,
   display_name text,
   bio text,
-  avatar_url text,
+  -- avatar_url removed
   availability_status text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

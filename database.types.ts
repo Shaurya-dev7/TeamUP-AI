@@ -312,34 +312,88 @@ export type Database = {
       }
       profiles: {
         Row: {
-          availability_status: string | null
-          avatar_url: string | null
-          bio: string | null
-          created_at: string
-          display_name: string | null
           id: string
-          updated_at: string
           username: string
+          name: string | null
+          age: number | null
+          gender: string | null
+          college: string | null
+          hostel_city: string | null
+          location: string | null
+          skills: string | null
+          rating: number | null
+          workscore: number | null
+          feedback_score: number | null
+          reviews_count: number | null
+          hackathons_participated: number | null
+          projects_completed: number | null
+          badges: string | null
+          achievements: string | null
+          forum_posts: number | null
+          events_participated: number | null
+          teams_joined: number | null
+          saved_projects: number | null
+          last_active_days: number | null
+          profile_completed: boolean | null
+          suspended: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          availability_status?: string | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          display_name?: string | null
           id: string
-          updated_at?: string
           username: string
+          name?: string | null
+          age?: number | null
+          gender?: string | null
+          college?: string | null
+          hostel_city?: string | null
+          location?: string | null
+          skills?: string | null
+          rating?: number | null
+          workscore?: number | null
+          feedback_score?: number | null
+          reviews_count?: number | null
+          hackathons_participated?: number | null
+          projects_completed?: number | null
+          badges?: string | null
+          achievements?: string | null
+          forum_posts?: number | null
+          events_participated?: number | null
+          teams_joined?: number | null
+          saved_projects?: number | null
+          last_active_days?: number | null
+          profile_completed?: boolean | null
+          suspended?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          availability_status?: string | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          display_name?: string | null
           id?: string
-          updated_at?: string
           username?: string
+          name?: string | null
+          age?: number | null
+          gender?: string | null
+          college?: string | null
+          hostel_city?: string | null
+          location?: string | null
+          skills?: string | null
+          rating?: number | null
+          workscore?: number | null
+          feedback_score?: number | null
+          reviews_count?: number | null
+          hackathons_participated?: number | null
+          projects_completed?: number | null
+          badges?: string | null
+          achievements?: string | null
+          forum_posts?: number | null
+          events_participated?: number | null
+          teams_joined?: number | null
+          saved_projects?: number | null
+          last_active_days?: number | null
+          profile_completed?: boolean | null
+          suspended?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
