@@ -19,15 +19,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verify token corresponds to a real user
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData?.user) {
-      console.error('Auth token invalid when calling /api/create-group-chat:', userError);
       return res.status(401).json({ error: 'Invalid token' });
     }
     const userId = userData.user.id;
 
-    // Create group chat
-    const { data: chat, error: chatError } = await supabase.from('chats').insert({
-        is_group: true,
+    // Create group conversation
+    const { data: chat, error: chatError } = await supabase.from('conversations').insert({
+        type: 'group',
         title: name,
+        // icon_url: ... optional
     }).select().single();
 
     if (chatError || !chat) {
@@ -36,30 +36,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Add members: creator + selected members
-    // Deduplicate IDs just in case
     const allMemberIds = Array.from(new Set([userId, ...memberIds]));
     
     const membersPayload = allMemberIds.map(pid => ({
-        chat_id: chat.id,
-        profile_id: pid,
+        conversation_id: chat.id,
+        user_id: pid,
         role: pid === userId ? 'admin' : 'member'
     }));
 
-    const { error: membersError } = await supabase.from('chat_members').insert(membersPayload);
+    const { error: membersError } = await supabase.from('conversation_participants').insert(membersPayload);
     
     if (membersError) {
       console.error('Error adding group members (service):', membersError);
+      // Rollback chat if possible (manual deletion)? Use atomic logic if we could.
+      // For now, return error.
       return res.status(500).json({ error: 'Failed to add group members', details: membersError?.message });
     }
 
     // Initial system message
-    const { error: msgError } = await supabase.from('chat_messages').insert({
-      chat_id: chat.id,
+    const { error: msgError } = await supabase.from('messages').insert({
+      conversation_id: chat.id,
       sender_id: userId,
-      content: `created group "${name}"`
+      content: `created group "${name}"`,
+      message_type: 'text'
     } as any);
 
     if (msgError) {
+        // Log but don't fail
       console.error('Error inserting initial group message:', msgError);
     }
 

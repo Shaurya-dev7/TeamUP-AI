@@ -313,7 +313,7 @@ export default function DiscoverInternshipsPage() {
                 ))}
             </div>
 
-             <div className="flex items-center gap-2 w-full xl:w-auto justify-end flex-wrap">
+             <div className="flex items-center gap-2 w-full xl:w-auto justify-between md:justify-end flex-wrap">
                  {/* Duration Filter */}
                 <div className="relative">
                      <button

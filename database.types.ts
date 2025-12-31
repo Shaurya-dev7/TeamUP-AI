@@ -453,6 +453,92 @@ export type Database = {
           },
         ]
       }
+      courses: {
+        Row: {
+          course_id: string
+          title: string
+          description: string | null
+          language: string
+          certificate_available: boolean
+          platform: string
+          redirect_url: string
+          category: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          title: string
+          description?: string | null
+          language: string
+          certificate_available: boolean
+          platform: string
+          redirect_url: string
+          category?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          title?: string
+          description?: string | null
+          language?: string
+          certificate_available?: boolean
+          platform?: string
+          redirect_url?: string
+          category?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      course_clicks: {
+        Row: {
+          id: number
+          course_id: string
+          source_page: string
+          clicked_at: string
+        }
+        Insert: {
+          id?: number
+          course_id: string
+          source_page: string
+          clicked_at?: string
+        }
+        Update: {
+          id?: number
+          course_id?: string
+          source_page?: string
+          clicked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_clicks_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          }
+        ]
+      }
+      category_clicks: {
+        Row: {
+          id: number
+          category_name: string
+          clicked_at: string
+        }
+        Insert: {
+          id?: number
+          category_name: string
+          clicked_at?: string
+        }
+        Update: {
+          id?: number
+          category_name?: string
+          clicked_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

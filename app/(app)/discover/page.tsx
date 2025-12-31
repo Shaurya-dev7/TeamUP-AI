@@ -2,10 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, DollarSign, Clock, ArrowRight, Shield, Code, Brain, Cloud, Briefcase, Trophy, Calendar, Filter, UserPlus, Check, ChevronDown, Users, Sparkles } from "lucide-react";
+import { Search, MapPin, DollarSign, Clock, ArrowRight, Shield, Code, Brain, Cloud, Briefcase, Trophy, Calendar, Filter, UserPlus, Check, ChevronDown, Users, Sparkles, Zap, Loader2, ExternalLink, Globe, MessageCircle } from "lucide-react";
 import Link from "next/link";
-
 import { createClient } from "@/lib/supabase/client";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { toast } from "sonner";
+
+// Import Server Actions for Courses
+import { getTrendingCourses, getNewCourses, trackCourseClick } from "./courses/actions";
 
 // --- Types ---
 type Profile = {
@@ -135,45 +139,6 @@ const internships = [
   },
 ];
 
-const courses = [
-  {
-    id: 1,
-    title: "Cybersecurity Essentials",
-    provider: "SecureNet Academy",
-    students: "12k+ Students",
-    rating: "4.8",
-    image: "shield", 
-    gradient: "from-red-500 to-orange-600",
-  },
-  {
-    id: 2,
-    title: "Full Stack Web Dev",
-    provider: "CodeMastery",
-    students: "45k+ Students",
-    rating: "4.9",
-    image: "code",
-    gradient: "from-blue-600 to-cyan-500",
-  },
-  {
-    id: 3,
-    title: "Machine Learning A-Z",
-    provider: "DataScience Pro",
-    students: "28k+ Students",
-    rating: "4.7",
-    image: "brain",
-    gradient: "from-purple-600 to-pink-500",
-  },
-  {
-    id: 4,
-    title: "Cloud Computing AWS",
-    provider: "Cloud Certified",
-    students: "18k+ Students",
-    rating: "4.8",
-    image: "cloud",
-    gradient: "from-amber-500 to-yellow-500",
-  },
-];
-
 const container = {
   hidden: { opacity: 0 },
   show: {
@@ -206,6 +171,7 @@ export default function DiscoverPage() {
   
   const [realPeople, setRealPeople] = useState<Profile[]>([]);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [courses, setCourses] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -218,37 +184,78 @@ export default function DiscoverPage() {
     fetchSession();
   }, []);
 
-  // --- 2. Fetch Profiles & Follows ---
+  // --- 2. Fetch Data (Profiles, Follows, Courses) ---
   useEffect(() => {
     if (!userId) return;
 
     const fetchData = async () => {
         setLoading(true);
         // Fetch profiles (excluding self)
-        const { data: profilesData } = await supabase
+        let query = supabase
             .from('profiles')
             .select('id, name, username, skills, college, location')
-            .neq('id', userId)
-            .limit(20); 
+            .neq('id', userId);
+
+        if (searchQuery.trim()) {
+            // Server-side search for profiles
+            // We use 'or' to search across multiple columns (username, name, skills)
+            const cleanQuery = searchQuery.trim().toLowerCase();
+            query = query.or(`username.ilike.%${cleanQuery}%,name.ilike.%${cleanQuery}%,skills.ilike.%${cleanQuery}%`);
+            query = query.limit(50);
+        } else {
+            // Default "recent" or "random" view
+            query = query.limit(20);
+        }
+
+        const { data: profilesData } = await query;
 
         if (profilesData) {
             setRealPeople(profilesData);
         }
 
-        // Fetch followed IDs
-        const { data: followsData } = await supabase
-            .from('follows')
-            .select('following_id')
-            .eq('follower_id', userId);
+        // Fetch followed IDs only once per session ideally, but okay here for now
+        // We only really need this if we aren't constantly refetching it
+        if (!searchQuery) {
+            const { data: followsData } = await supabase
+                .from('follows')
+                .select('following_id')
+                .eq('follower_id', userId);
 
-        if (followsData) {
-            setFollowedIds(new Set(followsData.map(f => f.following_id)));
+            if (followsData) {
+                setFollowedIds(new Set((followsData as any[]).map(f => f.following_id)));
+            }
         }
+
+        // Fetch Courses (Trending with fallback to New)
+        // Only fetch courses if we are not deep-searching for people (optimization)
+        if (!courses.length) {
+             try {
+                let fetchedCourses = await getTrendingCourses();
+                // If few trending courses, pad with new courses
+                if (!fetchedCourses || fetchedCourses.length < 3) {
+                    const newCoursesList = await getNewCourses();
+                    // Filter out duplicates if any
+                    const existingIds = new Set(fetchedCourses.map((c: any) => c.course_id));
+                    const extras = (newCoursesList as any[]).filter(c => !existingIds.has(c.course_id));
+                    fetchedCourses = [...fetchedCourses, ...extras];
+                }
+                // Limit to 4 for the preview grid
+                setCourses(fetchedCourses.slice(0, 4));
+            } catch (e) {
+                console.error("Error fetching preview courses:", e);
+            }
+        }
+
         setLoading(false);
     };
 
-    fetchData();
-  }, [userId]);
+    // Debounce the fetch if searching
+    const timeout = setTimeout(() => {
+        fetchData();
+    }, searchQuery ? 500 : 0);
+
+    return () => clearTimeout(timeout);
+  }, [userId, searchQuery]);
 
 
   // --- 3. Follow Logic ---
@@ -268,20 +275,43 @@ export default function DiscoverPage() {
     // DB Call
     if (isFollowing) {
         // @ts-ignore - Supabase type inference fix
-        await supabase.from('follows').delete().match({ follower_id: userId, following_id: targetId });
+        const { error } = await supabase.from('follows').delete().match({ follower_id: userId, following_id: targetId });
+        if (error) {
+             toast.error("Failed to unfollow");
+             // Revert
+             setFollowedIds(followedIds); 
+        } else {
+             toast.success("Unfollowed successfully");
+        }
     } else {
-        await supabase.from('follows').insert({ follower_id: userId, following_id: targetId });
+        const { error } = await supabase.from('follows').insert({ follower_id: userId, following_id: targetId } as any);
+        if (error) {
+             toast.error("Failed to follow");
+             // Revert
+             setFollowedIds(followedIds);
+        } else {
+             toast.success("Following user");
+        }
     }
   };
 
+  // --- 4. Course Click Logic ---
+  const handleCourseClick = async (courseId: string, fallbackUrl: string) => {
+      try {
+          const url = await trackCourseClick(courseId, "discover_home_preview");
+          if (url) window.open(url, "_blank");
+          else if (fallbackUrl) window.open(fallbackUrl, "_blank");
+      } catch (e) {
+          console.error("Track failed", e);
+          if (fallbackUrl) window.open(fallbackUrl, "_blank");
+      }
+  };
 
-  // --- 4. Filtering Logic ---
-  const filteredPeople = realPeople.filter(p => 
-    (filter === 'all' || filter === 'people') &&
-    (p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.skills?.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+
+  // --- 5. Filtering Logic ---
+  // Since we now search on the server for People, we just display the results directly.
+  // We still keep the 'filter' tab logic for showing/hiding sections.
+  const filteredPeople = realPeople;
 
   const filteredInternships = internships.filter(i => 
     (filter === 'all' || filter === 'internships') &&
@@ -293,7 +323,8 @@ export default function DiscoverPage() {
   const filteredCourses = courses.filter(c => 
     (filter === 'all' || filter === 'courses') &&
     (c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.provider.toLowerCase().includes(searchQuery.toLowerCase()))
+    (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (c.platform && c.platform.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   const filteredHackathons = hackathons.filter(h => 
@@ -355,7 +386,7 @@ export default function DiscoverPage() {
                         className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                     >
                         <FilterIcon className="w-4 h-4" />
-                        <span>{currentFilter.label}</span>
+                        <span className="hidden sm:inline">{currentFilter.label}</span>
                         <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isFilterOpen ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -398,11 +429,27 @@ export default function DiscoverPage() {
           </motion.div>
         </div>
 
-        {/* No Results Message */}
+        {/* No Results Empty State */}
         {searchQuery && !hasResults && !loading && (
-            <div className="text-center py-20">
-                <p className="text-xl text-neutral-500">No results found for "{searchQuery}" in {filter}</p>
-            </div>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center py-20 text-center"
+            >
+                <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-6">
+                    <Search className="w-10 h-10 text-neutral-400" />
+                </div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">No results found</h3>
+                <p className="text-neutral-500 max-w-sm">
+                    We couldn't find anything matching "{searchQuery}" in {filter === 'all' ? 'any category' : filter}. Try adjusting your search or filters.
+                </p>
+                <button 
+                    onClick={() => { setSearchQuery(""); setFilter("all"); }}
+                    className="mt-6 px-6 py-2.5 bg-neutral-900 dark:bg-white text-white dark:text-black rounded-xl font-bold hover:opacity-90 transition-opacity"
+                >
+                    Clear Search
+                </button>
+            </motion.div>
         )}
 
         {/* --- SUGGESTED PEOPLE SECTION (REAL DB DATA) --- */}
@@ -423,7 +470,9 @@ export default function DiscoverPage() {
             {loading ? (
                  <div className="flex gap-4 overflow-hidden px-2">
                     {[1,2,3,4,5].map(i => (
-                        <div key={i} className="w-[200px] h-[280px] bg-neutral-100 dark:bg-neutral-800 rounded-3xl animate-pulse shrink-0" />
+                        <div key={i} className="flex flex-col gap-3 shrink-0">
+                            <Skeleton className="w-[220px] h-[280px] rounded-3xl" />
+                        </div>
                     ))}
                  </div>
             ) : filteredPeople.length > 0 ? (
@@ -437,58 +486,73 @@ export default function DiscoverPage() {
                             {/* Hover Gradient Border Effect */}
                             <div className="absolute inset-0 border-2 border-transparent group-hover:border-yellow-400 rounded-3xl transition-colors pointer-events-none" />
                             
-                            <div className="relative">
-                                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-br from-yellow-400 to-orange-500 shadow-inner">
-                                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-neutral-800 border-2 border-white dark:border-neutral-900">
-                                        <img src={avatar} alt={person.username} className="w-full h-full object-cover" />
+                            <Link href={`/profile/${person.username}`} className="w-full flex flex-col items-center gap-4 flex-1">
+                                <div className="relative">
+                                    <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-br from-yellow-400 to-orange-500 shadow-inner card-zoom-hover">
+                                        <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-neutral-800 border-2 border-white dark:border-neutral-900">
+                                            <img src={avatar} alt={person.username} className="w-full h-full object-cover" />
+                                        </div>
+                                    </div>
+                                    <div className="absolute bottom-1 right-1 bg-black dark:bg-white text-white dark:text-black rounded-full p-1.5 shadow-lg">
+                                        <Shield className="w-3 h-3" />
                                     </div>
                                 </div>
-                                <div className="absolute bottom-1 right-1 bg-black dark:bg-white text-white dark:text-black rounded-full p-1.5 shadow-lg">
-                                    <Shield className="w-3 h-3" />
+
+                                <div className="space-y-1 w-full flex-1">
+                                    <h3 className="font-bold text-lg text-neutral-900 dark:text-white truncate hover:underline decoration-neutral-400 underline-offset-4" title={person.name || person.username}>
+                                        {person.name || person.username}
+                                    </h3>
+                                    {/* Suggestion Text */}
+                                    <p className="text-[10px] text-indigo-500 font-bold tracking-tight mb-1">
+                                        Suggested because you like {person.skills?.split(',')[0] || 'Tech'}
+                                    </p>
+                                    {(person.skills || person.college) && (
+                                        <p className="text-xs font-medium text-neutral-500 truncate" title={person.skills || person.college || ""}>
+                                            {person.skills?.split(',')[0] || person.college}
+                                        </p>
+                                    )}
+                                    {!person.skills && !person.college && (
+                                         <p className="text-xs font-medium text-neutral-500 truncate">Member</p>
+                                    )}
                                 </div>
-                            </div>
+                                
+                                <div className="flex items-center justify-center gap-1 h-5">
+                                     {person.location ? (
+                                        <p className="text-[10px] uppercase font-bold tracking-wide text-neutral-400 flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" /> {person.location}
+                                        </p>
+                                     ) : (
+                                        <p className="text-[10px] uppercase font-bold tracking-wide text-neutral-400">
+                                            New to TeamUp
+                                        </p>
+                                     )}
+                                </div>
+                            </Link>
 
-                            <div className="space-y-1 w-full flex-1">
-                                <h3 className="font-bold text-lg text-neutral-900 dark:text-white truncate" title={person.name || person.username}>
-                                    {person.name || person.username}
-                                </h3>
-                                {(person.skills || person.college) && (
-                                    <p className="text-xs font-medium text-neutral-500 truncate" title={person.skills || person.college || ""}>
-                                        {person.skills?.split(',')[0] || person.college}
-                                    </p>
-                                )}
-                                {!person.skills && !person.college && (
-                                     <p className="text-xs font-medium text-neutral-500 truncate">Member</p>
-                                )}
+                            <div className="flex items-center gap-2 w-full mt-auto">
+                                <button 
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggleFollow(person.id);
+                                    }}
+                                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                                        isFollowing 
+                                        ? "bg-neutral-100 text-neutral-900 border border-neutral-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-neutral-800 dark:text-white dark:border-neutral-700 dark:hover:bg-red-900/20 dark:hover:text-red-400" 
+                                        : "bg-neutral-900 text-white hover:bg-black hover:shadow-lg hover:shadow-neutral-500/20 active:scale-95 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+                                    }`}
+                                >
+                                    {isFollowing ? "Following" : "Follow"}
+                                </button>
+                                
+                                <Link
+                                    href={`/chat?userId=${person.id}`}
+                                    className="p-2.5 rounded-xl bg-neutral-100 text-neutral-900 border border-neutral-200 hover:bg-yellow-400 hover:border-yellow-400 hover:text-neutral-950 hover:shadow-lg dark:bg-neutral-800 dark:text-white dark:border-neutral-700 dark:hover:bg-yellow-400 dark:hover:text-neutral-950 transition-all active:scale-95"
+                                    title="Message"
+                                >
+                                    <MessageCircle className="w-5 h-5" />
+                                </Link>
                             </div>
-                            
-                            {/* Mutuals - Mock for now as DB graph is complex for single query, showing Location instead if available */}
-                            <div className="flex items-center justify-center gap-1 h-5">
-                                 {person.location ? (
-                                    <p className="text-[10px] uppercase font-bold tracking-wide text-neutral-400 flex items-center gap-1">
-                                        <MapPin className="w-3 h-3" /> {person.location}
-                                    </p>
-                                 ) : (
-                                    <p className="text-[10px] uppercase font-bold tracking-wide text-neutral-400">
-                                        New to TeamUp
-                                    </p>
-                                 )}
-                            </div>
-
-                            <button 
-                                onClick={() => toggleFollow(person.id)}
-                                className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                                    isFollowing 
-                                    ? "bg-neutral-100 text-neutral-900 border border-neutral-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-neutral-800 dark:text-white dark:border-neutral-700 dark:hover:bg-red-900/20 dark:hover:text-red-400" 
-                                    : "bg-neutral-900 text-white hover:bg-black hover:shadow-lg hover:shadow-neutral-500/20 active:scale-95 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-                                }`}
-                            >
-                                {isFollowing ? (
-                                    <>Following</>
-                                ) : (
-                                    <>Follow</>
-                                )}
-                            </button>
                         </div>
                     )})}
                 </div>
@@ -661,51 +725,61 @@ export default function DiscoverPage() {
                         <Brain className="h-6 w-6 text-yellow-500" />
                          {searchQuery ? `Courses matching "${searchQuery}"` : "Recommended Courses"}
                    </h2>
-                   <p className="mt-2 text-neutral-500 dark:text-neutral-400">Upskill yourself with these trending courses.</p>
+                   <p className="mt-2 text-neutral-500 dark:text-neutral-400">Upskill yourself with these trending government courses.</p>
                 </div>
                  <Link href="/discover/courses" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white flex items-center gap-1">
                     View all <ArrowRight className="h-4 w-4" />
                 </Link>
             </div>
 
-            <motion.div 
+             <motion.div 
                  variants={container}
                  initial="hidden"
                  whileInView="show"
                  viewport={{ once: true, margin: "-100px" }}
                  className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
             >
-                 {filteredCourses.map((course) => (
-                    <motion.div key={course.id} variants={item} className="group cursor-pointer">
+                 {filteredCourses.map((course, index) => {
+                    const gradients = [
+                        "from-blue-600 to-purple-600",
+                        "from-emerald-500 to-teal-600",
+                        "from-orange-500 to-red-600",
+                        "from-pink-500 to-rose-600",
+                        "from-indigo-500 to-blue-600",
+                        "from-violet-600 to-fuchsia-600"
+                    ];
+                    // Deterministic gradient based on index or course ID char code sum
+                    const gradient = gradients[index % gradients.length];
+
+                    return (
+                    <motion.div key={course.course_id} variants={item} className="group cursor-pointer" onClick={() => handleCourseClick(course.course_id, course.redirect_url)}>
                         <div className="relative overflow-hidden rounded-3xl bg-neutral-900 dark:bg-neutral-900 text-white shadow-xl aspect-[4/5] flex flex-col justify-between p-6 transition-all hover:-translate-y-2 hover:shadow-2xl">
-                             {/* Background Gradient */}
-                             <div className={`absolute inset-0 bg-gradient-to-br ${course.gradient} opacity-80 group-hover:opacity-100 transition-opacity`}/>
+                             {/* Background Gradient - Randomized or consistent based on ID? */}
+                             <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-90 group-hover:opacity-100 transition-opacity`}/>
                              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
                             
                              <div className="relative z-10">
-                                <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4">
-                                     {course.image === 'shield' && <Shield className="h-6 w-6" />}
-                                     {course.image === 'code' && <Code className="h-6 w-6" />}
-                                     {course.image === 'brain' && <Brain className="h-6 w-6" />}
-                                     {course.image === 'cloud' && <Cloud className="h-6 w-6" />}
+                                <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4 shadow-sm border border-white/10">
+                                     <Brain className="h-6 w-6" />
                                 </div>
-                                <h3 className="text-2xl font-bold leading-tight">{course.title}</h3>
-                                <p className="text-white/80 mt-1 font-medium">{course.provider}</p>
+                                <h3 className="text-2xl font-bold leading-tight line-clamp-3 mb-2">{course.title}</h3>
+                                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10">
+                                    <p className="text-white/90 text-xs font-bold uppercase tracking-wider">{course.platform}</p>
+                                </div>
                              </div>
 
                              <div className="relative z-10 space-y-4">
                                  <div className="flex items-center gap-1 text-sm font-medium text-white/90">
-                                     <span>⭐ {course.rating}</span>
-                                     <span className="text-white/50">•</span>
-                                     <span>{course.students}</span>
+                                     <Globe className="w-4 h-4 opacity-75" />
+                                     <span>{course.language}</span>
                                  </div>
-                                 <button className="w-full py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 font-bold hover:bg-white hover:text-black transition-all">
-                                    Start Learning
+                                 <button className="w-full py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 font-bold hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 group-hover:bg-white group-hover:text-black">
+                                    Start Learning <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                  </button>
                              </div>
                         </div>
                     </motion.div>
-                 ))}
+                 )})}
             </motion.div>
          </div>
          )}

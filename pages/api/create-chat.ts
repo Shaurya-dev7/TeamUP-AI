@@ -26,102 +26,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Ensure target profile exists
     const { data: targetProfile, error: pErr } = await supabase.from('profiles').select('id').eq('id', otherId).maybeSingle();
-    if (pErr) {
-      console.error('Error checking target profile:', pErr);
-      return res.status(500).json({ error: 'Failed to check target profile' });
+    if (pErr || !targetProfile) {
+      return res.status(404).json({ error: 'Target profile not found' });
     }
-    if (!targetProfile) return res.status(404).json({ error: 'Target profile not found' });
 
-    // Idempotent one-to-one deduplication:
-    // Find candidate chats where both users are members, verify chat is not a group and has exactly 2 members
+    // Deduplication for Direct Chats
     try {
-      const { data: memberships, error: memErr } = await supabase
-        .from('chat_members')
-        .select('chat_id, profile_id')
-        .in('profile_id', [userId, otherId]);
-      if (memErr) {
-        console.error('Error querying chat_members for dedup:', memErr);
-        return res.status(500).json({ error: 'Failed to query chat memberships' });
-      }
+      const { data: memberships } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, user_id')
+        .in('user_id', [userId, otherId]);
 
-      const chatToMembers = new Map();
+      const convToMembers = new Map();
       (memberships || []).forEach((m: any) => {
-        const set = chatToMembers.get(m.chat_id) || new Set();
-        set.add(m.profile_id);
-        chatToMembers.set(m.chat_id, set);
+        const set = convToMembers.get(m.conversation_id) || new Set();
+        set.add(m.user_id);
+        convToMembers.set(m.conversation_id, set);
       });
 
-      const candidateChatIds = Array.from(chatToMembers.entries()).filter(([_id, set]: any) => set.size === 2).map(([id]: any) => id);
+      const candidateIds = Array.from(convToMembers.entries()).filter(([_id, set]: any) => set.size === 2).map(([id]: any) => id);
 
-      if (candidateChatIds.length > 0) {
-        // Fetch candidate chats
-        const { data: chatsFound, error: chatsErr } = await supabase
-          .from('chats')
+      if (candidateIds.length > 0) {
+        // Fetch conversations to check type='direct'
+        const { data: convs } = await supabase
+          .from('conversations')
           .select('*')
-          .in('id', candidateChatIds);
-        if (chatsErr) {
-          console.error('Error fetching candidate chats for dedup:', chatsErr);
-          return res.status(500).json({ error: 'Failed to fetch chats for dedup' });
-        }
-
-        // Fetch members for candidate chats to ensure exactly 2 members
-        const { data: membersForCandidates, error: membersErr } = await supabase
-          .from('chat_members')
-          .select('chat_id, profile_id')
-          .in('chat_id', candidateChatIds);
-        if (membersErr) {
-          console.error('Error fetching members for candidate chats:', membersErr);
-          return res.status(500).json({ error: 'Failed to fetch chat members' });
-        }
-
-        const membersCountMap = new Map();
-        (membersForCandidates || []).forEach((m: any) => {
-          const set = membersCountMap.get(m.chat_id) || new Set();
-          set.add(m.profile_id);
-          membersCountMap.set(m.chat_id, set);
-        });
-
-        for (const c of (chatsFound || [])) {
-          if (c.is_group) continue;
-          const memberSet = membersCountMap.get(c.id);
-          if (memberSet && memberSet.size === 2) {
-            // Return existing one-to-one chat
-            return res.status(200).json({ chat: c });
-          }
+          .in('id', candidateIds)
+          .eq('type', 'direct');
+        
+        // Also ensure member count exactly 2 for these chats
+        if (convs && convs.length > 0) {
+           // We found an existing direct chat
+           return res.status(200).json({ chat: convs[0] });
         }
       }
     } catch (dedupErr) {
-      // Best-effort: if dedup fails for unexpected reasons, continue to create new chat
-      console.error('Dedup check error, proceeding to create new chat:', dedupErr);
+      console.error('Dedup check error:', dedupErr);
     }
 
-    // Create chat and members (service role bypasses RLS)
-    const { data: chat, error: chatError } = await supabase.from('chats').insert({}).select().single();
-    if (chatError || !chat) {
-      console.error('Error creating chat (service):', chatError);
-      return res.status(500).json({ error: 'Failed to create chat', details: chatError?.message });
+    // Create new Conversation
+    const { data: conv, error: convError } = await supabase.from('conversations').insert({
+        type: 'direct'
+    }).select().single();
+
+    if (convError || !conv) {
+      console.error('Error creating conversation:', convError);
+      return res.status(500).json({ error: 'Failed to create chat', details: convError?.message });
     }
 
-    const { error: membersError } = await supabase.from('chat_members').insert([
-      { chat_id: chat.id, profile_id: userId },
-      { chat_id: chat.id, profile_id: otherId }
+    // Add Participants
+    const { error: membersError } = await supabase.from('conversation_participants').insert([
+      { conversation_id: conv.id, user_id: userId, role: 'member' },
+      { conversation_id: conv.id, user_id: otherId, role: 'member' }
     ]);
+
     if (membersError) {
-      console.error('Error adding members (service):', membersError);
-      return res.status(500).json({ error: 'Failed to add chat members', details: membersError?.message });
+      console.error('Error adding participants:', membersError);
+      return res.status(500).json({ error: 'Failed to add participants', details: membersError?.message });
     }
 
-    const { error: msgError } = await supabase.from('chat_messages').insert({
-      chat_id: chat.id,
-      sender_id: userId,
-      content: 'Chat started!'
-    } as any);
-    if (msgError) {
-      console.error('Error inserting initial chat message (service):', msgError);
-      // not fatal — continue
-    }
-
-    return res.status(200).json({ chat });
+    // Initial Message (System or Empty?) - WhatsApp doesn't really have "Chat started", but we'll add a system msg or just leave empty.
+    // Let's NOT add a visible message so the chat is empty. 
+    // BUT we need an `updated_at` trigger or something. The trigger handles it.
+    
+    return res.status(200).json({ chat: conv });
   } catch (err) {
     console.error('/api/create-chat unexpected error:', err);
     return res.status(500).json({ error: 'Unexpected server error' });

@@ -37,7 +37,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     skills, // comma-separated string
     hackathons_participated, 
     projects_completed, 
-    achievements 
+    achievements,
+    // New Fields
+    github_url,
+    linkedin_url,
+    profile_picture_url,
+    interests, // comma-separated string
+    certificates, // jsonb array
+    workplace,
+    school,
+    synced_contacts // jsonb array
   } = req.body;
 
   try {
@@ -55,6 +64,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hackathons_participated: hackathons_participated ? parseInt(hackathons_participated) : 0,
       projects_completed: projects_completed ? parseInt(projects_completed) : 0,
       achievements,
+      // New Fields Mapped
+      github_url,
+      linkedin_url,
+      profile_picture_url,
+      interests,
+      certificates: certificates || [],
+      workplace,
+      school,
+      synced_contacts: synced_contacts ? (Array.isArray(synced_contacts) ? synced_contacts : []) : [] // Ensure array if provided
     });
 
     if (profileErr) {

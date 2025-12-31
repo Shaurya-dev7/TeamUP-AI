@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "dev:lan": "next dev -H 0.0.0.0 -p 3000",
+    "dev": "npx -y kill-port 3000 && next dev -p 3000",
+    "dev:lan": "npx -y kill-port 3000 && next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
     "start": "next start",
     "start:lan": "next start -H 0.0.0.0 -p 3000",
@@ -26,6 +26,7 @@
     "posthog-js": "^1.270.1",
     "react": "^19",
     "react-dom": "^19",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

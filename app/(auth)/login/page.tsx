@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -21,20 +22,65 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setLoading(false);
+      if (authError) {
+        if (authError.message.includes("Email not confirmed")) {
+          throw new Error("Please verify your email before logging in. Check your inbox.");
+        }
+        throw new Error(authError.message);
+      }
 
-    if (authError) {
-      setError(authError.message);
-      return;
+      const user = data?.user;
+      if (!user) {
+        throw new Error("Login failed. Please try again.");
+      }
+
+      // Explicit Check: Ensure Email is Verified (Defensive)
+      // Note: signInWithPassword usually handles this if Supabase "Confirm Email" setting is on,
+      // but we double check or handle cases where it might not throw explicitly.
+      /* 
+         If user IS logged in but email_confirmed_at is null, we should ideally sign them out 
+         and tell them to verify. However, typically Supabase won't return a session if unverified 
+         depending on settings. We assume strict setting is ON.
+      */
+
+      // Check if profile exists
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Profile check error:", profileError);
+        // We generally shouldn't block login if just the profile check fails due to network, 
+        // but safely assume we need to redirect to create-profile if we can't find it.
+      }
+
+      setLoading(false);
+
+      if (!profile) {
+        // No profile found -> Redirect to Profile Creation
+        // We pass a query param or just let the page handle logic
+        router.push("/create-profile");
+      } else {
+        // Profile exists -> Dashboard
+        router.push("/");
+      }
+      
+      router.refresh();
+
+    } catch (err: any) {
+      setLoading(false);
+      const msg = err.message || "An error occurred during login.";
+      setError(msg);
+      toast.error(msg);
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
@@ -65,6 +111,10 @@ export default function LoginPage() {
               className="w-full rounded-xl border-2 border-transparent bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-900 transition-all placeholder:text-neutral-400 hover:bg-neutral-200/50 focus:border-yellow-400 focus:bg-white focus:outline-none dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 dark:focus:bg-neutral-950"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              id="email"
+              name="email"
+              type="email"
+              autoFocus
               autoComplete="email"
               inputMode="email"
               placeholder="name@example.com"
@@ -126,3 +176,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

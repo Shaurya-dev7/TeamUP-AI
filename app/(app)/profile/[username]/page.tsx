@@ -2,6 +2,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Github, Linkedin, Briefcase, School, Globe, Award, Sparkles, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { toast } from "sonner";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -195,6 +198,9 @@ export default function ProfilePage() {
          // Revert on error
          setIsFollowing(false);
          setFollowers((f) => Math.max(0, f - 1));
+         toast.error("Failed to follow. Please try again.");
+    } else {
+         toast.success(`You are now following ${profile.name || profile.username}`);
     }
     setFollowLoading(false);
   };
@@ -219,16 +225,41 @@ export default function ProfilePage() {
          // Revert
          setIsFollowing(true);
          setFollowers((f) => f + 1);
+         toast.error("Failed to unfollow.");
+    } else {
+         toast.success(`Unfollowed ${profile.name || profile.username}`);
     }
     setFollowLoading(false);
   };
 
-  // Simple loading state handling
+  // Skeleton Loading State
   if (!profile) {
-    if (username && !profile) {
-      return <div className="p-8 text-center">Loading or User Not Found...</div>;
-    }
-    return <div className="p-8 text-center">Loading...</div>;
+    return (
+      <div className="space-y-5 animate-in fade-in duration-200">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 sm:p-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                <Skeleton className="size-14 rounded-3xl" />
+                <div className="space-y-2">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                    <div className="space-y-1 mt-3">
+                         <Skeleton className="h-4 w-40" />
+                         <Skeleton className="h-4 w-36" />
+                    </div>
+                </div>
+            </div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                <Skeleton className="h-16 rounded-2xl" />
+                <Skeleton className="h-16 rounded-2xl" />
+                <Skeleton className="h-16 rounded-2xl" />
+            </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+            <Skeleton className="h-40 rounded-3xl" />
+            <Skeleton className="h-40 rounded-3xl" />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -236,16 +267,35 @@ export default function ProfilePage() {
       <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 sm:p-8">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div className="flex items-start gap-4">
-            <div className="grid size-14 place-items-center rounded-3xl bg-neutral-950 text-lg font-black text-yellow-400 dark:bg-white dark:text-neutral-950">
-              {(profile.name || username || "").split(" ").slice(0, 2).map((w: any) => w[0]).join("")}
+            <div className="grid size-14 place-items-center rounded-3xl bg-neutral-950 text-lg font-black text-yellow-400 dark:bg-white dark:text-neutral-950 overflow-hidden">
+              {profile.profile_picture_url ? (
+                <img src={profile.profile_picture_url} alt={profile.name} className="h-full w-full object-cover" />
+              ) : (
+                (profile.name || username || "").split(" ").slice(0, 2).map((w: any) => w[0]).join("")
+              )}
             </div>
             <div>
               <div className="text-xl font-semibold tracking-tight">{profile.name || username}</div>
               <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">@{username}</div>
               {/* Removed bio, using college/location */}
               <div className="mt-3 flex flex-col gap-1 text-sm text-neutral-600 dark:text-neutral-400">
-                  {profile.college && <div>🎓 {profile.college}</div>}
-                  {profile.location && <div>📍 {profile.location}</div>}
+                  {profile.workplace && <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> {profile.workplace}</div>}
+                  {profile.school && <div className="flex items-center gap-2"><School className="w-4 h-4" /> {profile.school}</div>}
+                  {profile.college && <div className="flex items-center gap-2">🎓 {profile.college}</div>}
+                  {profile.location && <div className="flex items-center gap-2">📍 {profile.location}</div>}
+                  
+                  <div className="flex gap-3 mt-2">
+                    {profile.github_url && (
+                        <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
+                            <Github className="w-5 h-5" />
+                        </a>
+                    )}
+                    {profile.linkedin_url && (
+                        <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 transition-colors">
+                            <Linkedin className="w-5 h-5" />
+                        </a>
+                    )}
+                  </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -274,7 +324,7 @@ export default function ProfilePage() {
                     className="rounded-2xl bg-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed" 
                     onClick={handleUnfollow}
                 >
-                    {followLoading ? 'Loading...' : 'Unfollow'}
+                    {followLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Unfollow'}
                 </button>
               ) : (
                 <button 
@@ -283,11 +333,19 @@ export default function ProfilePage() {
                     className="rounded-2xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed" 
                     onClick={handleFollow}
                 >
-                    {followLoading ? 'Loading...' : 'Follow'}
+                    {followLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Follow'}
                 </button>
               )
             )}
-            <a href={`/chat?userId=${profile.id}`} className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">Message</a>
+            {sessionUserId && profile.id === sessionUserId ? (
+               <a href="/create-profile" className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">
+                 Edit Profile
+               </a>
+            ) : (
+              <a href={`/chat?userId=${profile.id}`} className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">
+                Message
+              </a>
+            )}
           </div>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -335,6 +393,47 @@ export default function ProfilePage() {
           <div className="mt-3 flex flex-wrap gap-2">
             {skills.map((s) => <Tag key={s}>{s}</Tag>)}
           </div>
+        
+        {/* Interests Section */}
+        {profile.interests && profile.interests.length > 0 && (
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
+            <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-pink-500" />
+                <h2 className="text-base font-semibold">Interests</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {typeof profile.interests === 'string' 
+                    ? profile.interests.split(',').map((s: string) => <Tag key={s}>{s.trim()}</Tag>) 
+                    : Array.isArray(profile.interests) ? profile.interests.map((s: string) => <Tag key={s}>{s}</Tag>) : null
+                }
+            </div>
+            </div>
+        )}
+
+        {/* Certificates Section */}
+        {profile.certificates && Array.isArray(profile.certificates) && profile.certificates.length > 0 && (
+             <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
+                <div className="flex items-center gap-2 mb-4">
+                    <Award className="w-5 h-5 text-teal-500" />
+                    <h2 className="text-base font-semibold">Certifications</h2>
+                </div>
+                <div className="space-y-3">
+                    {profile.certificates.map((cert: any, idx: number) => (
+                        <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+                            <div>
+                                <div className="font-semibold text-sm">{cert.title}</div>
+                                <div className="text-xs text-neutral-500">{cert.issuer} • {cert.year}</div>
+                            </div>
+                            {cert.url && (
+                                <a href={cert.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-teal-600 hover:underline flex items-center gap-1">
+                                    View Credential <Globe className="w-3 h-3" />
+                                </a>
+                            )}
+                        </div>
+                    ))}
+                </div>
+             </div>
+        )}
         </div>
         <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
           <h2 className="text-base font-semibold">Achievements</h2>
