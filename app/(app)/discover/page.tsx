@@ -19,7 +19,9 @@ type Profile = {
   skills: string | null;
   college: string | null;
   location: string | null;
-  avatar_url?: string; 
+  avatar_url?: string;
+  matchPercentage?: number;
+  interests?: string | null;
 };
 
 type Hackathon = {
@@ -170,16 +172,31 @@ export default function DiscoverPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   const [realPeople, setRealPeople] = useState<Profile[]>([]);
-  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [followedUsernames, setFollowedUsernames] = useState<Set<string>>(new Set());
   const [courses, setCourses] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [blockedUsernames, setBlockedUsernames] = useState<Set<string>>(new Set());
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
 
   // --- 1. Fetch User Session ---
   useEffect(() => {
     const fetchSession = async () => {
         const { data } = await supabase.auth.getSession();
-        setUserId(data.session?.user?.id || null);
+        const uid = data.session?.user?.id || null;
+        setUserId(uid);
+        
+        if (uid) {
+          // Get current user's username for block checking
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', uid)
+            .single() as { data: { username: string } | null };
+          if (profile?.username) {
+            setCurrentUsername(profile.username);
+          }
+        }
     };
     fetchSession();
   }, []);
@@ -190,39 +207,54 @@ export default function DiscoverPage() {
 
     const fetchData = async () => {
         setLoading(true);
-        // Fetch profiles (excluding self)
-        let query = supabase
-            .from('profiles')
-            .select('id, name, username, skills, college, location')
-            .neq('id', userId);
-
         if (searchQuery.trim()) {
             // Server-side search for profiles
             // We use 'or' to search across multiple columns (username, name, skills)
+            let query = supabase
+                .from('profiles')
+                .select('id, name, username, skills, college, location')
+                .neq('id', userId);
+
             const cleanQuery = searchQuery.trim().toLowerCase();
             query = query.or(`username.ilike.%${cleanQuery}%,name.ilike.%${cleanQuery}%,skills.ilike.%${cleanQuery}%`);
             query = query.limit(50);
+            
+            const { data: profilesData } = await query;
+            if (profilesData) {
+                setRealPeople(profilesData);
+            }
         } else {
-            // Default "recent" or "random" view
-            query = query.limit(20);
+            // Default: Fetch Recommendations
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                
+                if (token) {
+                    const res = await fetch('/api/recommendations?limit=20', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.recommendations) {
+                            setRealPeople(data.recommendations);
+                        }
+                    }
+                }
+            } catch (e) {
+               console.error("Failed to fetch recommendations", e);
+            }
         }
 
-        const { data: profilesData } = await query;
-
-        if (profilesData) {
-            setRealPeople(profilesData);
-        }
-
-        // Fetch followed IDs only once per session ideally, but okay here for now
-        // We only really need this if we aren't constantly refetching it
-        if (!searchQuery) {
+        // Fetch followed usernames
+        if (!searchQuery && currentUsername) {
             const { data: followsData } = await supabase
                 .from('follows')
-                .select('following_id')
-                .eq('follower_id', userId);
+                .select('following')
+                .eq('follower', currentUsername);
 
             if (followsData) {
-                setFollowedIds(new Set((followsData as any[]).map(f => f.following_id)));
+                setFollowedUsernames(new Set((followsData as any[]).map(f => f.following)));
             }
         }
 
@@ -257,41 +289,90 @@ export default function DiscoverPage() {
     return () => clearTimeout(timeout);
   }, [userId, searchQuery]);
 
+  // --- 2b. Fetch Blocked Users ---
+  useEffect(() => {
+    if (!currentUsername) return;
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        // Fetch all users I've blocked
+        // @ts-ignore - blocks table exists but not in generated types
+        const { data: myBlocks } = await supabase
+          .from('blocks')
+          .select('blocked_username')
+          .eq('blocker_username', currentUsername);
+
+        // Fetch all users who've blocked me
+        // @ts-ignore - blocks table exists but not in generated types
+        const { data: blockedByOthers } = await supabase
+          .from('blocks')
+          .select('blocker_username')
+          .eq('blocked_username', currentUsername);
+
+        const blockedSet = new Set<string>();
+        
+        // Add users I've blocked
+        (myBlocks as any[] || []).forEach((b: any) => {
+          if (b.blocked_username) blockedSet.add(b.blocked_username.toLowerCase());
+        });
+        
+        // Add users who've blocked me
+        (blockedByOthers as any[] || []).forEach((b: any) => {
+          if (b.blocker_username) blockedSet.add(b.blocker_username.toLowerCase());
+        });
+
+        setBlockedUsernames(blockedSet);
+      } catch (e) {
+        console.error('Error fetching blocks:', e);
+      }
+    })();
+  }, [currentUsername, supabase]);
 
   // --- 3. Follow Logic ---
-  const toggleFollow = async (targetId: string) => {
-    if (!userId) return;
+  const toggleFollow = async (targetUsername: string) => {
+    if (!userId || !currentUsername) return;
 
     // Optimistic Update
-    const isFollowing = followedIds.has(targetId);
-    const newFollowedIds = new Set(followedIds);
+    const isFollowing = followedUsernames.has(targetUsername);
+    const newFollowedUsernames = new Set(followedUsernames);
     if (isFollowing) {
-        newFollowedIds.delete(targetId);
+        newFollowedUsernames.delete(targetUsername);
     } else {
-        newFollowedIds.add(targetId);
+        newFollowedUsernames.add(targetUsername);
     }
-    setFollowedIds(newFollowedIds);
+    setFollowedUsernames(newFollowedUsernames);
 
-    // DB Call
-    if (isFollowing) {
-        // @ts-ignore - Supabase type inference fix
-        const { error } = await supabase.from('follows').delete().match({ follower_id: userId, following_id: targetId });
-        if (error) {
-             toast.error("Failed to unfollow");
-             // Revert
-             setFollowedIds(followedIds); 
-        } else {
-             toast.success("Unfollowed successfully");
+    // API Call
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error("No token");
+
+        const method = isFollowing ? 'DELETE' : 'POST';
+        const res = await fetch('/api/follow', {
+            method,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ following_username: targetUsername })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Action failed");
         }
-    } else {
-        const { error } = await supabase.from('follows').insert({ follower_id: userId, following_id: targetId } as any);
-        if (error) {
-             toast.error("Failed to follow");
-             // Revert
-             setFollowedIds(followedIds);
-        } else {
-             toast.success("Following user");
-        }
+        
+        toast.success(isFollowing ? "Unfollowed successfully" : "Followed successfully");
+    } catch (error: any) {
+        console.error("Follow error:", error);
+        toast.error(error.message || "Failed to update follow status");
+        // Revert
+        setFollowedUsernames(followedUsernames);
     }
   };
 
@@ -309,9 +390,10 @@ export default function DiscoverPage() {
 
 
   // --- 5. Filtering Logic ---
-  // Since we now search on the server for People, we just display the results directly.
-  // We still keep the 'filter' tab logic for showing/hiding sections.
-  const filteredPeople = realPeople;
+  // Filter out blocked users from people results
+  const filteredPeople = realPeople.filter(person => 
+    !blockedUsernames.has(person.username.toLowerCase())
+  );
 
   const filteredInternships = internships.filter(i => 
     (filter === 'all' || filter === 'internships') &&
@@ -478,7 +560,7 @@ export default function DiscoverPage() {
             ) : filteredPeople.length > 0 ? (
                 <div className="flex gap-4 overflow-x-auto pb-8 pt-4 px-2 -mx-2 scrollbar-hide snap-x">
                     {filteredPeople.map((person) => {
-                        const isFollowing = followedIds.has(person.id);
+                        const isFollowing = followedUsernames.has(person.username);
                         const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${person.username}`;
                         
                         return (
@@ -503,9 +585,18 @@ export default function DiscoverPage() {
                                         {person.name || person.username}
                                     </h3>
                                     {/* Suggestion Text */}
-                                    <p className="text-[10px] text-indigo-500 font-bold tracking-tight mb-1">
-                                        Suggested because you like {person.skills?.split(',')[0] || 'Tech'}
-                                    </p>
+                                    {person.matchPercentage ? (
+                                        <div className="flex items-center gap-1.5 mb-1 bg-gradient-to-r from-yellow-400/10 to-orange-500/10 px-2 py-0.5 rounded-full border border-yellow-400/20">
+                                            <Zap className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                            <p className="text-[10px] text-yellow-700 dark:text-yellow-400 font-extrabold tracking-tight">
+                                                {person.matchPercentage}% Match
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] text-indigo-500 font-bold tracking-tight mb-1">
+                                            Suggested because you like {person.skills?.split(',')[0] || 'Tech'}
+                                        </p>
+                                    )}
                                     {(person.skills || person.college) && (
                                         <p className="text-xs font-medium text-neutral-500 truncate" title={person.skills || person.college || ""}>
                                             {person.skills?.split(',')[0] || person.college}
@@ -534,7 +625,7 @@ export default function DiscoverPage() {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        toggleFollow(person.id);
+                                        toggleFollow(person.username);
                                     }}
                                     className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                                         isFollowing 
@@ -594,6 +685,9 @@ export default function DiscoverPage() {
                         <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 h-full flex flex-col">
                             {/* Image Header with Gradient Overlay */}
                             <div className="h-32 w-full relative overflow-hidden">
+                                {filteredHackathons.indexOf(hackathon) === 0 && (
+                                    <div className="absolute top-4 left-4 z-20 px-2 py-1 bg-red-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-lg">New</div>
+                                )}
                                 <div className={`absolute inset-0 bg-gradient-to-r ${hackathon.gradient} opacity-80 mix-blend-multiply dark:mix-blend-overlay z-10`} />
                                 <img src={hackathon.image} alt={hackathon.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
                                 <div className="absolute top-4 right-4 z-20 bg-white/90 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1 shadow-sm">

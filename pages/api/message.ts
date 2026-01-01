@@ -1,6 +1,7 @@
 // @ts-nocheck
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from '@/lib/profile/completeness';
 
 // POST: { sender_id, receiver_id, content }
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -10,6 +11,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'sender_id, receiver_id, and content required' });
   }
   const supabase = await createClient();
+
+  // Check sender profile completeness before allowing message
+  const { data: senderProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', sender_id)
+    .single();
+
+  if (senderProfile) {
+    const completeness = checkProfileCompleteness(senderProfile, { minimal: true });
+    if (!completeness.isComplete) {
+      return res.status(403).json({ 
+        error: INCOMPLETE_PROFILE_ERROR,
+        missing: completeness.missing,
+        profile_incomplete: true
+      });
+    }
+  }
 
   // Find existing 1:1 chat between these two users
   let chatId: string | null = null;

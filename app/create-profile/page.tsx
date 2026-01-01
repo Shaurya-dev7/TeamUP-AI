@@ -22,7 +22,10 @@ import {
   FileText,
   Briefcase, 
   School,
-  Share2
+  Share2,
+  Loader2,
+  X,
+  AlertCircle
 } from "lucide-react";
 
 export default function CreateProfilePage() {
@@ -30,6 +33,9 @@ export default function CreateProfilePage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [initialUsername, setInitialUsername] = useState("");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -99,6 +105,7 @@ export default function CreateProfilePage() {
             school: profile.school || "",
             synced_contacts: Array.isArray(profile.synced_contacts) && profile.synced_contacts.length > 0
           });
+          setInitialUsername(profile.username || "");
         }
       } catch (err) {
         console.error("Failed to load profile", err);
@@ -106,6 +113,34 @@ export default function CreateProfilePage() {
     })();
     return () => { mounted = false; };
   }, [supabase]);
+
+  useEffect(() => {
+    const username = formData.username;
+    if (!username || username === initialUsername) {
+        setUsernameAvailable(null);
+        setCheckingUsername(false);
+        return;
+    }
+
+    setCheckingUsername(true);
+    setUsernameAvailable(null);
+
+    const timer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/check-username?username=${username}`);
+            const data = await res.json();
+            if (res.ok) {
+                setUsernameAvailable(data.available);
+            }
+        } catch (error) {
+            console.error("Username check failed", error);
+        } finally {
+            setCheckingUsername(false);
+        }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.username, initialUsername]);
 
   const sortedSkills = [
     "Frontend", "Backend", "Full Stack", "Data Science", "Cloud",
@@ -180,6 +215,10 @@ export default function CreateProfilePage() {
         throw new Error("You must be logged in.");
       }
 
+      if (usernameAvailable === false) {
+        throw new Error("Username is already taken.");
+      }
+
       const payload = {
         ...formData,
         skills: formData.skills.join(", "),
@@ -237,16 +276,39 @@ export default function CreateProfilePage() {
           {/* Section 1: Identity */}
           <Section title="Identity" icon={<User className="w-5 h-5 text-yellow-500" />}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputGroup label="Username" sub="Unique, immutable">
-                     <input 
-                        required
-                        className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-transparent focus:border-yellow-400 focus:bg-white dark:focus:bg-black transition-all outline-none font-medium"
-                        placeholder="e.g. tech_wizaard"
-                        value={formData.username}
-                        onChange={e => handleInputChange("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                     />
+                <InputGroup label="Username *" sub="Unique, immutable">
+                     <div className="relative">
+                        <input 
+                            required
+                            className={`w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 transition-all outline-none font-medium ${
+                                usernameAvailable === false 
+                                ? "border-red-500 focus:border-red-500" 
+                                : usernameAvailable === true 
+                                ? "border-green-500 focus:border-green-500"
+                                : "border-transparent focus:border-yellow-400 focus:bg-white dark:focus:bg-black"
+                            }`}
+                            placeholder="e.g. tech_wizaard"
+                            value={formData.username}
+                            onChange={e => handleInputChange("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                         />
+                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
+                            {checkingUsername && <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />}
+                            {!checkingUsername && usernameAvailable === true && <Check className="w-5 h-5 text-green-500" />}
+                            {!checkingUsername && usernameAvailable === false && <X className="w-5 h-5 text-red-500" />}
+                         </div>
+                     </div>
+                     {!checkingUsername && usernameAvailable === false && (
+                        <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> Username is taken
+                        </p>
+                     )}
+                     {!checkingUsername && usernameAvailable === true && (
+                        <p className="text-xs text-green-500 mt-1 font-medium flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Username is available
+                        </p>
+                     )}
                 </InputGroup>
-                <InputGroup label="Full Name">
+                <InputGroup label="Full Name *">
                      <input 
                         required
                         className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-transparent focus:border-yellow-400 focus:bg-white dark:focus:bg-black transition-all outline-none font-medium"
@@ -255,7 +317,7 @@ export default function CreateProfilePage() {
                         onChange={e => handleInputChange("name", e.target.value)}
                      />
                 </InputGroup>
-                <InputGroup label="Age">
+                <InputGroup label="Age *">
                      <input 
                         required
                         type="number"
@@ -265,7 +327,7 @@ export default function CreateProfilePage() {
                         onChange={e => handleInputChange("age", e.target.value)}
                      />
                 </InputGroup>
-                 <InputGroup label="Gender">
+                 <InputGroup label="Gender *">
                      <select 
                         required
                         className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-transparent focus:border-yellow-400 focus:bg-white dark:focus:bg-black transition-all outline-none font-medium appearance-none"

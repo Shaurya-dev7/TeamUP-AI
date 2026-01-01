@@ -83,10 +83,10 @@ export function ChatInput({ value, onChange, onSend, disabled }: ChatInputProps)
                 whileTap={{ scale: 0.95 }}
                 onClick={onSend}
                 disabled={disabled || !value.trim()}
-                className={`flex h-[44px] w-[44px] items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-neutral-950 shadow-lg shadow-yellow-500/20 transition-all ${disabled || !value.trim() ? "opacity-50 grayscale" : "hover:shadow-yellow-500/40"
+                className={`flex h-[44px] w-[44px] items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-neutral-950 shadow-lg shadow-yellow-500/20 transition-all ${disabled || !value.trim() ? "opacity-50 grayscale cursor-not-allowed" : "hover:shadow-yellow-500/40"
                     }`}
             >
-                <Send className="h-5 w-5 ml-0.5" />
+                {disabled ? <div className="h-5 w-5 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" /> : <Send className="h-5 w-5 ml-0.5" />}
             </motion.button>
         </div>
     );

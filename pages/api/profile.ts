@@ -30,13 +30,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Profile not found' });
     }
 
+    // Check if viewer is blocked by this profile owner
+    // Get viewer username from auth header if present
+    const authHeader = req.headers.authorization;
+    let viewerUsername: string | null = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAuth = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser(token);
+      
+      if (user) {
+        const { data: viewerProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        viewerUsername = viewerProfile?.username || null;
+      }
+    }
+
+    // If viewer is logged in, check if they are blocked by this profile
+    if (viewerUsername && viewerUsername.toLowerCase() !== profile.username.toLowerCase()) {
+      const { data: blockRecord } = await (supabase as any)
+        .from('blocks')
+        .select('blocker_username')
+        .eq('blocker_username', profile.username)
+        .eq('blocked_username', viewerUsername)
+        .maybeSingle();
+
+      if (blockRecord) {
+        // Viewer is blocked - respond as "profile not found" (silent)
+        return res.status(404).json({ error: 'Profile not found' });
+      }
+    }
+
     // Get follower count (where following matches this profile's username)
+    // @ts-ignore - follows table uses follower/following columns
     const { count: followersCount } = await supabase
       .from('follows')
       .select('*', { count: 'exact', head: true })
       .eq('following', profile.username);
 
     // Get following count (where follower matches this profile's username)
+    // @ts-ignore - follows table uses follower/following columns
     const { count: followingCount } = await supabase
       .from('follows')
       .select('*', { count: 'exact', head: true })
@@ -44,6 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get followers list (fetching profiles where username is in the 'follower' column of follows table)
     // We first get the list of usernames that follow this user
+    // @ts-ignore - follows table uses follower/following columns
     const { data: followerLinks, error: fError } = await supabase
         .from('follows')
         .select('follower')
@@ -61,6 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get following list (fetching profiles where username is in the 'following' column of follows table)
+    // @ts-ignore - follows table uses follower/following columns
     const { data: followingLinks, error: fingError } = await supabase
         .from('follows')
         .select('following')

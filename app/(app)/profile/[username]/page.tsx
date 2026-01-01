@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Github, Linkedin, Briefcase, School, Globe, Award, Sparkles, Loader2 } from "lucide-react";
+import { Github, Linkedin, Briefcase, School, Globe, Award, Sparkles, Loader2, MoreHorizontal, Shield, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "sonner";
 
@@ -32,6 +32,56 @@ export default function ProfilePage() {
   const [following, setFollowing] = useState(0);
   const [mutuals, setMutuals] = useState(0);
   const [suggested, setSuggested] = useState<any[]>([]);
+
+  // Profile view tracking for ML events
+  const viewStartTime = useRef<number>(Date.now());
+
+  // Log profile view event on unmount/visibility change
+  useEffect(() => {
+    if (!username || !profile?.username) return;
+
+    const logProfileView = async () => {
+      const durationMs = Date.now() - viewStartTime.current;
+      if (durationMs < 1000) return; // Ignore very short views
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        fetch('/api/log-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            event_type: 'profile_view_event',
+            payload: {
+              viewed_username: profile.username,
+              view_duration_ms: durationMs,
+              source: 'profile'
+            },
+            client_ts: new Date().toISOString()
+          })
+        }).catch(() => {}); // Fire and forget
+      } catch {}
+    };
+
+    // Log on visibility change (tab switch, minimize) or page unload
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        logProfileView();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', logProfileView);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', logProfileView);
+      logProfileView(); // Also log on component unmount
+    };
+  }, [profile?.username, username, supabase]);
+
   // Suggest teammates: similar skills/interests, mutuals, same school/workplace
   useEffect(() => {
     if (!profile) return;
@@ -85,6 +135,9 @@ export default function ProfilePage() {
 
   // Fetch current user's username
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  
+  // Track if current user's profile is complete (for disabling actions)
+  const [isMyProfileComplete, setIsMyProfileComplete] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -94,13 +147,43 @@ export default function ProfilePage() {
       if (mounted) setSessionUserId(userId);
       
       if (userId) {
-          const { data: me } = await supabase.from('profiles').select('username').eq('id', userId).maybeSingle();
+          const { data: me } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
           const meProfile = me as any; // Cast to any to avoid 'never' issue if inference fails
-          if (mounted && meProfile) setCurrentUsername(meProfile.username);
+          if (mounted && meProfile) {
+            setCurrentUsername(meProfile.username);
+            // Check profile completeness for current user
+            const hasName = meProfile.name && meProfile.name.trim() !== '';
+            const hasPfp = meProfile.avatar_url || meProfile.pfp || meProfile.profile_picture;
+            const hasSkillsOrInterests = (meProfile.skills && meProfile.skills.trim() !== '') || 
+                                          (meProfile.interests && meProfile.interests.trim() !== '');
+            const hasCollegeOrWorkplace = (meProfile.college && meProfile.college.trim() !== '') ||
+                                           (meProfile.workplace && meProfile.workplace.trim() !== '');
+            setIsMyProfileComplete(hasName && hasPfp && hasSkillsOrInterests && hasCollegeOrWorkplace);
+          }
       }
 
       try {
         if (!username) return;
+
+        // Cache Key
+        const CACHE_KEY = `profile_cache_${username}`;
+
+        // Try local storage first
+        if (mounted) {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    // Check expiry (1 hour)
+                    if (Date.now() - parsed.timestamp < 3600000) {
+                        setProfile(parsed.data.profile || null);
+                        setSkills(parsed.data.profile?.skills ? parsed.data.profile.skills.split(',').map((s: string) => s.trim()) : []);
+                        setFollowers(parsed.data.followers_count || 0);
+                        setFollowing(parsed.data.following_count || 0);
+                    }
+                } catch(e) { localStorage.removeItem(CACHE_KEY); }
+            }
+        }
 
         // Fetch profile data from API (bypasses RLS and gets correct counts)
         const res = await fetch(`/api/profile?username=${encodeURIComponent(username)}`);
@@ -108,7 +191,7 @@ export default function ProfilePage() {
         if (!res.ok) {
           if (res.status === 404) {
             console.warn("Profile not found");
-            if (mounted) setProfile(null);
+            if (mounted && !profile) setProfile(null);
             return;
           }
           console.error("Failed to fetch profile", res.statusText);
@@ -118,6 +201,12 @@ export default function ProfilePage() {
         const data = await res.json();
 
         if (mounted) {
+          // Update Cache
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+              timestamp: Date.now(),
+              data
+          }));
+
           setProfile(data.profile);
           // skills from comma separated string
           setSkills(data.profile?.skills ? data.profile.skills.split(',').map((s: string) => s.trim()) : []);
@@ -172,8 +261,155 @@ export default function ProfilePage() {
     return () => { mounted = false; };
   }, [username, supabase]); // Removed currentUsername from dependency to avoid loop, handled inside.
 
+  // Realtime subscription for follower/following count updates
+  useEffect(() => {
+    if (!profile?.username) return;
+
+    const channel = supabase
+      .channel(`follows-${profile.username}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'follows',
+          filter: `following=eq.${profile.username}`,
+        },
+        (payload) => {
+          // Someone followed this profile
+          console.log('New follower:', payload);
+          setFollowers((f) => f + 1);
+          // If the INSERT is from current user, update isFollowing
+          if ((payload.new as any)?.follower === currentUsername) {
+            setIsFollowing(true);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'follows',
+          filter: `following=eq.${profile.username}`,
+        },
+        (payload) => {
+          // Someone unfollowed this profile
+          console.log('Follower removed:', payload);
+          setFollowers((f) => Math.max(0, f - 1));
+          // If the DELETE is from current user, update isFollowing
+          if ((payload.old as any)?.follower === currentUsername) {
+            setIsFollowing(false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.username, currentUsername, supabase]);
+
   // Follow loading state
   const [followLoading, setFollowLoading] = useState(false);
+
+  // Block state
+  const [hasBlockedThisUser, setHasBlockedThisUser] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
+  const [showBlockMenu, setShowBlockMenu] = useState(false);
+
+  // Fetch block status when profile loads
+  useEffect(() => {
+    if (!profile?.username || !sessionUserId || !currentUsername) return;
+    if (currentUsername === profile.username) return; // Own profile
+    
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        const res = await fetch(`/api/blocks?target=${encodeURIComponent(profile.username)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHasBlockedThisUser(data.blocked);
+        }
+      } catch (e) {
+        console.error('Error checking block status:', e);
+      }
+    })();
+  }, [profile?.username, sessionUserId, currentUsername, supabase]);
+
+  const handleBlock = async () => {
+    if (blockLoading || !profile?.username) return;
+    setBlockLoading(true);
+    setShowBlockConfirmModal(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not logged in');
+
+      const res = await fetch('/api/blocks', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ blocked_username: profile.username })
+      });
+
+      if (res.ok) {
+        setHasBlockedThisUser(true);
+        setIsFollowing(false); // Auto-unfollow: blocking removes any follow relationship
+        toast.success(`Blocked ${profile.name || profile.username}`);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to block user');
+      }
+    } catch (e) {
+      console.error('Block error:', e);
+      toast.error('Failed to block user');
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (blockLoading || !profile?.username) return;
+    setBlockLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not logged in');
+
+      const res = await fetch('/api/blocks', {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ blocked_username: profile.username })
+      });
+
+      if (res.ok) {
+        setHasBlockedThisUser(false);
+        toast.success(`Unblocked ${profile.name || profile.username}`);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to unblock user');
+      }
+    } catch (e) {
+      console.error('Unblock error:', e);
+      toast.error('Failed to unblock user');
+    } finally {
+      setBlockLoading(false);
+    }
+  };
 
   const handleFollow = async () => {
     if (followLoading) return;
@@ -189,20 +425,35 @@ export default function ProfilePage() {
     setIsFollowing(true);
     setFollowers((f) => f + 1);
     
-    const { error } = await supabase.from("follows").insert([
-        { follower: currentUsername, following: profile.username }
-    ] as any);
-    
-    if (error) {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error("No token");
+
+        const res = await fetch('/api/follow', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ following_username: profile.username })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Failed to follow");
+        }
+        
+        toast.success(`You are now following ${profile.name || profile.username}`);
+    } catch (error: any) {
          console.error("Follow error:", error);
          // Revert on error
          setIsFollowing(false);
          setFollowers((f) => Math.max(0, f - 1));
-         toast.error("Failed to follow. Please try again.");
-    } else {
-         toast.success(`You are now following ${profile.name || profile.username}`);
+         toast.error(error.message || "Failed to follow. Please try again.");
+    } finally {
+        setFollowLoading(false);
     }
-    setFollowLoading(false);
   };
 
   const handleUnfollow = async () => {
@@ -214,22 +465,35 @@ export default function ProfilePage() {
     setIsFollowing(false);
     setFollowers((f) => Math.max(0, f - 1));
 
-    const { error } = await supabase
-        .from("follows")
-        .delete()
-        .eq("follower", currentUsername)
-        .eq("following", profile.username);
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error("No token");
 
-    if (error) {
+        const res = await fetch('/api/follow', {
+            method: 'DELETE',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ following_username: profile.username })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || "Failed to unfollow");
+        }
+        
+        toast.success(`Unfollowed ${profile.name || profile.username}`);
+    } catch (error: any) {
          console.error("Unfollow error:", error);
          // Revert
          setIsFollowing(true);
          setFollowers((f) => f + 1);
-         toast.error("Failed to unfollow.");
-    } else {
-         toast.success(`Unfollowed ${profile.name || profile.username}`);
+         toast.error(error.message || "Failed to unfollow.");
+    } finally {
+        setFollowLoading(false);
     }
-    setFollowLoading(false);
   };
 
   // Skeleton Loading State
@@ -264,6 +528,47 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-5">
+      {/* Blocked Banner - shown when you have blocked this user */}
+      {hasBlockedThisUser && (
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-2xl flex items-center gap-3">
+          <Shield className="w-5 h-5 flex-shrink-0" />
+          <span className="font-medium">You have blocked this person</span>
+        </div>
+      )}
+
+      {/* Block Confirmation Modal */}
+      {showBlockConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowBlockConfirmModal(false)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Block {profile.name || profile.username}?</h3>
+              <button onClick={() => setShowBlockConfirmModal(false)} className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+              They won't be able to see your profile or message you. They won't be notified that you blocked them.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBlockConfirmModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBlock}
+                disabled={blockLoading}
+                className="flex-1 px-4 py-2.5 rounded-2xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50"
+              >
+                {blockLoading ? 'Blocking...' : 'Block'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 sm:p-8">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div className="flex items-start gap-4">
@@ -316,11 +621,13 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {sessionUserId && profile.id !== sessionUserId && currentUsername !== profile.username && (
+            {/* Follow/Unfollow button - hidden if you've blocked this user */}
+            {sessionUserId && profile.id !== sessionUserId && currentUsername !== profile.username && !hasBlockedThisUser && (
               isFollowing ? (
                 <button 
                     type="button" 
-                    disabled={followLoading}
+                    disabled={followLoading || !isMyProfileComplete}
+                    title={!isMyProfileComplete ? 'Complete your profile to start following and chatting with others.' : ''}
                     className="rounded-2xl bg-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed" 
                     onClick={handleUnfollow}
                 >
@@ -329,7 +636,8 @@ export default function ProfilePage() {
               ) : (
                 <button 
                     type="button" 
-                    disabled={followLoading}
+                    disabled={followLoading || !isMyProfileComplete}
+                    title={!isMyProfileComplete ? 'Complete your profile to start following and chatting with others.' : ''}
                     className="rounded-2xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed" 
                     onClick={handleFollow}
                 >
@@ -342,9 +650,64 @@ export default function ProfilePage() {
                  Edit Profile
                </a>
             ) : (
-              <a href={`/chat?userId=${profile.id}`} className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">
-                Message
-              </a>
+              <>
+                {/* Message button - hidden if you've blocked this user, disabled if profile incomplete */}
+                {!hasBlockedThisUser && (
+                  isMyProfileComplete ? (
+                    <a href={`/chat?userId=${profile.id}`} className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900">
+                      Message
+                    </a>
+                  ) : (
+                    <button 
+                      type="button"
+                      disabled
+                      title="Complete your profile to start following and chatting with others."
+                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold opacity-50 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-950"
+                    >
+                      Message
+                    </button>
+                  )
+                )}
+                {/* 3-dots menu for block/unblock */}
+                {sessionUserId && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowBlockMenu(!showBlockMenu)}
+                      className="rounded-2xl border border-neutral-200 bg-white p-2.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                    {showBlockMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowBlockMenu(false)} />
+                        <div className="absolute right-0 top-full mt-2 z-50 w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl overflow-hidden">
+                          {hasBlockedThisUser ? (
+                            <button
+                              type="button"
+                              onClick={() => { handleUnblock(); setShowBlockMenu(false); }}
+                              disabled={blockLoading}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50"
+                            >
+                              <Shield className="w-4 h-4" />
+                              {blockLoading ? 'Unblocking...' : 'Unblock User'}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => { setShowBlockConfirmModal(true); setShowBlockMenu(false); }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              <Shield className="w-4 h-4" />
+                              Block User
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

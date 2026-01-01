@@ -23,7 +23,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const userId = userData.user.id;
 
+    // Check profile completeness (Minimal: Name required)
+    const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (userProfile) {
+        const { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } = require('@/lib/profile/completeness');
+        const completeness = checkProfileCompleteness(userProfile, { minimal: true });
+        if (!completeness.isComplete) {
+            return res.status(403).json({ 
+                error: INCOMPLETE_PROFILE_ERROR,
+                missing: completeness.missing,
+                profile_incomplete: true
+            });
+        }
+    }
+
     // Create group conversation
+    // @ts-ignore
     const { data: chat, error: chatError } = await supabase.from('conversations').insert({
         type: 'group',
         title: name,
@@ -44,6 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: pid === userId ? 'admin' : 'member'
     }));
 
+    // @ts-ignore
     const { error: membersError } = await supabase.from('conversation_participants').insert(membersPayload);
     
     if (membersError) {
@@ -54,6 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Initial system message
+    // @ts-ignore
     const { error: msgError } = await supabase.from('messages').insert({
       conversation_id: chat.id,
       sender_id: userId,

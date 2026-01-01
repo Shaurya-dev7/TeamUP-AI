@@ -7,7 +7,7 @@ import { ChatBackground } from "@/components/chat/ChatBackground";
 import { Conversation, ConversationList } from "@/components/chat/ConversationList";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { Message, MessageBubble } from "@/components/chat/MessageBubble";
-import { X, Users, Menu, Plus, ArrowLeft, Check, UserPlus, LogOut, Shield, Crown, Trash2, Info } from "lucide-react";
+import { X, Users, Menu, Plus, ArrowLeft, Check, UserPlus, LogOut, Shield, Crown, Trash2, Info, MoreHorizontal } from "lucide-react";
 
 
 
@@ -49,6 +49,19 @@ export default function ChatClient() {
     
     // Notification State
     const [notification, setNotification] = useState<{ sender: string, text: string } | null>(null);
+
+    // Block state for direct chats
+    const [hasBlockedChatUser, setHasBlockedChatUser] = useState(false);
+    const [chatBlockLoading, setChatBlockLoading] = useState(false);
+    const [showChatBlockMenu, setShowChatBlockMenu] = useState(false);
+    const [currentUserUsername, setCurrentUserUsername] = useState<string | null>(null);
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (messagesEndRef.current && messages.length > 0) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages]);
 
     // 1. Session Init
     useEffect(() => {
@@ -399,6 +412,22 @@ export default function ChatClient() {
 
     const handleSendMessage = async (val: string) => {
         if (!selectedConvId || !sessionUserId || !val.trim()) return;
+        
+        // Profile Completeness Check (Minimal: Name required)
+        const currentConv = conversationsWithPresence.find(c => c.id === selectedConvId);
+        // @ts-ignore
+        const me = currentConv?.participants?.find((p: any) => p.user_id === sessionUserId)?.user;
+        
+        // If we can't find 'me' (e.g. initial load), we might skip check or fetch.
+        // But usually loaded. If not loaded, we assume strictness? 
+        // Let's check if we have the profile data.
+        if (me) {
+            if (!me.name || !me.username || !me.age || !me.gender) {
+                alert("Profile incomplete. Mandatory fields: Name, Username, Age, Gender.");
+                return;
+            }
+        }
+
         setInput(""); // Optimistic clear
         
         // @ts-ignore
@@ -414,6 +443,7 @@ export default function ChatClient() {
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false); // Added for consistency or remove if unused
     const [isSearching, setIsSearching] = useState(false);
 
     // Global Search
@@ -475,6 +505,11 @@ export default function ChatClient() {
                 setIsSidebarOpen(false);
             } else {
                 console.error("Group creation failed", json);
+                if (json.error === 'Profile incomplete') {
+                     alert(`Profile incomplete: ${json.missing?.join(', ')}`);
+                } else if (json.error) {
+                    alert(`Error: ${json.error}`);
+                }
             }
         } catch (e) {
             console.error("Group creation error", e);
@@ -698,7 +733,12 @@ export default function ChatClient() {
                                 disabled={!newGroupName.trim() || selectedMembers.length === 0 || isSubmittingGroup}
                                 className="w-full py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-black font-bold rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-neutral-500/10"
                             >
-                                {isSubmittingGroup ? "Creating..." : (
+                                {isSubmittingGroup ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-neutral-900/30 dark:border-white/30 border-t-neutral-900 dark:border-t-white rounded-full animate-spin" />
+                                        <span>Creating Group...</span>
+                                    </div>
+                                ) : (
                                     <>
                                         <Check className="w-5 h-5" /> Create Group
                                     </>
@@ -873,6 +913,76 @@ export default function ChatClient() {
                                         </button>
                                     );
                                 })()
+                             )}
+
+                             {/* Block Menu for Direct Chats */}
+                             {activeConv.type === 'direct' && (
+                               <div className="relative">
+                                 <button
+                                   onClick={() => setShowChatBlockMenu(!showChatBlockMenu)}
+                                   className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                                   title="More options"
+                                 >
+                                   <MoreHorizontal className="w-5 h-5 text-neutral-500" />
+                                 </button>
+                                 {showChatBlockMenu && (
+                                   <>
+                                     <div className="fixed inset-0 z-40" onClick={() => setShowChatBlockMenu(false)} />
+                                     <div className="absolute right-0 top-full mt-2 z-50 w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl overflow-hidden">
+                                       {hasBlockedChatUser ? (
+                                         <button
+                                           type="button"
+                                           onClick={async () => {
+                                             if (!activeConv.other_user?.username) return;
+                                             setChatBlockLoading(true);
+                                             setShowChatBlockMenu(false);
+                                             try {
+                                               const { data: { session } } = await supabase.auth.getSession();
+                                               const token = session?.access_token;
+                                               if (!token) return;
+                                               await fetch('/api/blocks', {
+                                                 method: 'DELETE',
+                                                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                 body: JSON.stringify({ blocked_username: activeConv.other_user.username })
+                                               });
+                                               setHasBlockedChatUser(false);
+                                             } finally { setChatBlockLoading(false); }
+                                           }}
+                                           disabled={chatBlockLoading}
+                                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50"
+                                         >
+                                           <Shield className="w-4 h-4" />
+                                           {chatBlockLoading ? 'Unblocking...' : 'Unblock User'}
+                                         </button>
+                                       ) : (
+                                         <button
+                                           type="button"
+                                           onClick={async () => {
+                                             if (!activeConv.other_user?.username) return;
+                                             setChatBlockLoading(true);
+                                             setShowChatBlockMenu(false);
+                                             try {
+                                               const { data: { session } } = await supabase.auth.getSession();
+                                               const token = session?.access_token;
+                                               if (!token) return;
+                                               await fetch('/api/blocks', {
+                                                 method: 'POST',
+                                                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                 body: JSON.stringify({ blocked_username: activeConv.other_user.username })
+                                               });
+                                               setHasBlockedChatUser(true);
+                                             } finally { setChatBlockLoading(false); }
+                                           }}
+                                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                         >
+                                           <Shield className="w-4 h-4" />
+                                           Block User
+                                         </button>
+                                       )}
+                                     </div>
+                                   </>
+                                 )}
+                               </div>
                              )}
                         </div>
 

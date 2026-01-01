@@ -131,7 +131,7 @@ export default function AppFooter() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-neutral-200 dark:border-neutral-900 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-neutral-500 text-sm">
-            &copy; {currentYear} TeamUp Inc. All rights reserved.
+            &copy; {currentYear} TeamUp Inc. all rights reserved. <span className="ml-2 text-xs opacity-50">v1.2.0-beta</span>
           </p>
           <div className="flex items-center gap-2 text-sm text-neutral-500">
             <span>Made with</span>

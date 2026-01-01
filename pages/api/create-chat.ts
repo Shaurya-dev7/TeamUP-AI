@@ -22,6 +22,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const userId = userData.user.id;
 
+    // Check profile completeness (Minimal: Name required)
+    const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (userProfile) {
+        const { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } = require('@/lib/profile/completeness');
+        const completeness = checkProfileCompleteness(userProfile, { minimal: true });
+        if (!completeness.isComplete) {
+            return res.status(403).json({ 
+                error: INCOMPLETE_PROFILE_ERROR,
+                missing: completeness.missing,
+                profile_incomplete: true
+            });
+        }
+    }
+
     if (userId === otherId) return res.status(400).json({ error: "Can't create a chat with yourself" });
 
     // Ensure target profile exists
@@ -65,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Create new Conversation
+    // @ts-ignore
     const { data: conv, error: convError } = await supabase.from('conversations').insert({
         type: 'direct'
     }).select().single();
@@ -75,6 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Add Participants
+    // @ts-ignore
     const { error: membersError } = await supabase.from('conversation_participants').insert([
       { conversation_id: conv.id, user_id: userId, role: 'member' },
       { conversation_id: conv.id, user_id: otherId, role: 'member' }
