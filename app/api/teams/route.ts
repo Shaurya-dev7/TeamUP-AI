@@ -1,13 +1,49 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Use service role for atomic transactions
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Demo data fallback
+function getDemoTeams(search: string, limit: number) {
+  const teamNames = ["AI Innovators", "Web3 Wizards", "Cloud Crusaders", "Data Dragons", "Mobile Mavericks", "DevOps Dynamos", "Quantum Qrew", "Cyber Sentinels", "Code Commandos", "Blockchain Brigade", "ML Masters", "Full Stack Fury", "Backend Beasts", "Frontend Force", "UX Unicorns"];
+  const teamGoals = ["AI/ML Hackathon", "Web3 DeFi Project", "Cloud Architecture", "Data Science", "Mobile App Dev", "DevOps Automation", "Quantum Computing", "Cybersecurity", "Open Source", "Blockchain DApps"];
+  const rolesList = ["Frontend Dev", "Backend Dev", "ML Engineer", "DevOps", "Designer", "Data Scientist", "Mobile Dev", "QA Engineer"];
+  const joinModes = ['open', 'request', 'closed'];
+
+  const demoTeams = Array.from({ length: 50 }, (_, i) => ({
+    id: 100001 + i,
+    name: teamNames[i % teamNames.length],
+    goal: teamGoals[i % teamGoals.length],
+    join_mode: joinModes[i % 3],
+    is_private: joinModes[i % 3] === 'closed',
+    max_members: 4 + (i % 4),
+    member_count: 1 + (i % 3),
+    roles_needed: [rolesList[i % rolesList.length], rolesList[(i + 3) % rolesList.length]],
+  }));
+
+  // Filter by search
+  let filtered = demoTeams;
+  if (search) {
+    const q = search.toLowerCase();
+    filtered = demoTeams.filter(t => 
+      t.id.toString().includes(q) || t.name.toLowerCase().includes(q)
+    );
+  }
+
+  return filtered.slice(0, limit);
+}
 
 export async function GET(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({ error: "Supabase env variables are missing" }, { status: 500 });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
@@ -144,37 +180,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Demo data fallback
-function getDemoTeams(search: string, limit: number) {
-  const teamNames = ["AI Innovators", "Web3 Wizards", "Cloud Crusaders", "Data Dragons", "Mobile Mavericks", "DevOps Dynamos", "Quantum Qrew", "Cyber Sentinels", "Code Commandos", "Blockchain Brigade", "ML Masters", "Full Stack Fury", "Backend Beasts", "Frontend Force", "UX Unicorns"];
-  const teamGoals = ["AI/ML Hackathon", "Web3 DeFi Project", "Cloud Architecture", "Data Science", "Mobile App Dev", "DevOps Automation", "Quantum Computing", "Cybersecurity", "Open Source", "Blockchain DApps"];
-  const rolesList = ["Frontend Dev", "Backend Dev", "ML Engineer", "DevOps", "Designer", "Data Scientist", "Mobile Dev", "QA Engineer"];
-  const joinModes = ['open', 'request', 'closed'];
+export async function POST(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const demoTeams = Array.from({ length: 50 }, (_, i) => ({
-    id: 100001 + i,
-    name: teamNames[i % teamNames.length],
-    goal: teamGoals[i % teamGoals.length],
-    join_mode: joinModes[i % 3],
-    is_private: joinModes[i % 3] === 'closed',
-    max_members: 4 + (i % 4),
-    member_count: 1 + (i % 3),
-    roles_needed: [rolesList[i % rolesList.length], rolesList[(i + 3) % rolesList.length]],
-  }));
-
-  // Filter by search
-  let filtered = demoTeams;
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = demoTeams.filter(t => 
-      t.id.toString().includes(q) || t.name.toLowerCase().includes(q)
-    );
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({ error: "Supabase env variables are missing" }, { status: 500 });
   }
 
-  return filtered.slice(0, limit);
-}
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
-export async function POST(request: NextRequest) {
   try {
     // Authenticate user
     const authHeader = request.headers.get("Authorization");
@@ -210,7 +225,6 @@ export async function POST(request: NextRequest) {
       .insert({
         type: "group",
         title: name.trim(),
-        // description: description || null, // potentially invalid column
       })
       .select("id")
       .single();

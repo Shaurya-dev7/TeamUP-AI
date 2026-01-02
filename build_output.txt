@@ -1,0 +1,105 @@
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm.
+npm warn Unknown project config "strictDepBuilds". This will stop working in the next major version of npm.
+
+> nextjs-base-starter@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.5.7
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 11.1s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/24) ...
+   Generating static pages (6/24) 
+   Generating static pages (12/24) 
+   Generating static pages (18/24) 
+ Γ£ô Generating static pages (24/24)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                    Size  First Load JS
+Γöî Γùï /                                       9.41 kB         207 kB
+Γö£ Γùï /_not-found                                1 kB         157 kB
+Γö£ ╞Æ /api/check-username                       178 B         157 kB
+Γö£ ╞Æ /api/courses/sync                         178 B         157 kB
+Γö£ ╞Æ /api/debug/my-data                        178 B         157 kB
+Γö£ ╞Æ /api/hackathons                           178 B         157 kB
+Γö£ ╞Æ /api/hackathons/sync                      178 B         157 kB
+Γö£ ╞Æ /api/invites/[inviteId]/respond           178 B         157 kB
+Γö£ ╞Æ /api/join-requests/[requestId]/respond    178 B         157 kB
+Γö£ ╞Æ /api/seed                                 178 B         157 kB
+Γö£ ╞Æ /api/teams                                178 B         157 kB
+Γö£ ╞Æ /api/teams/[teamId]                       178 B         157 kB
+Γö£ ╞Æ /api/teams/[teamId]/invites               178 B         157 kB
+Γö£ ╞Æ /api/teams/[teamId]/join-requests         178 B         157 kB
+Γö£ ╞Æ /api/teams/[teamId]/members               178 B         157 kB
+Γö£ ╞Æ /api/teams/mine                           178 B         157 kB
+Γö£ ╞Æ /auth/callback                            178 B         157 kB
+Γö£ Γùï /chat                                   9.91 kB         272 kB
+Γö£ Γùï /create-profile                         11.3 kB         258 kB
+Γö£ Γùï /design-demo                            4.94 kB         202 kB
+Γö£ Γùï /discover                               11.4 kB         274 kB
+Γö£ Γùï /discover-demo                          7.16 kB         205 kB
+Γö£ Γùï /discover/courses                       4.24 kB         202 kB
+Γö£ Γùï /discover/hackathons                     5.6 kB         273 kB
+Γö£ Γùï /discover/internships                   8.54 kB         206 kB
+Γö£ Γùï /discover/teams                         5.57 kB         255 kB
+Γö£ ╞Æ /discover/teams/[teamId]                6.27 kB         228 kB
+Γö£ ╞Æ /discover/teams/[teamId]/chat           3.87 kB         279 kB
+Γö£ ╞Æ /discover/teams/[teamId]/edit           1.65 kB         227 kB
+Γö£ ╞Æ /discover/teams/[teamId]/invite         3.85 kB         225 kB
+Γö£ Γùï /discover/teams/create                    780 B         222 kB
+Γö£ Γùï /hackathons                              3.5 kB         272 kB
+Γö£ ╞Æ /hackathons/[category]                  6.43 kB         265 kB
+Γö£ Γùï /icon.png                                   0 B            0 B
+Γö£ Γùï /login                                  2.18 kB         261 kB
+Γö£ Γùï /logo-showcase                            178 B         157 kB
+Γö£ Γùï /notifications                          5.27 kB         264 kB
+Γö£ ╞Æ /profile/[username]                      7.9 kB         226 kB
+Γö£ Γùï /signup                                 2.37 kB         262 kB
+Γöö Γùï /teams                                  10.1 kB         260 kB
++ First Load JS shared by all                156 kB
+  Γö£ chunks/1255-c249f92046a3ee76.js         45.8 kB
+  Γö£ chunks/4bd1b696-f785427dddbba9fb.js     54.2 kB
+  Γö£ chunks/9da6db1e-560d96ba1fcdcf37.js     54.2 kB
+  Γöö other shared chunks (total)             2.15 kB
+
+Route (pages)                                  Size  First Load JS
+Γöî ╞Æ /api/blocks                                 0 B         151 kB
+Γö£ ╞Æ /api/chat/manage-group                      0 B         151 kB
+Γö£ ╞Æ /api/check-schema                           0 B         151 kB
+Γö£ ╞Æ /api/create-chat                            0 B         151 kB
+Γö£ ╞Æ /api/create-group-chat                      0 B         151 kB
+Γö£ ╞Æ /api/create-profile                         0 B         151 kB
+Γö£ ╞Æ /api/debug-profiles                         0 B         151 kB
+Γö£ ╞Æ /api/discover-by-interests                  0 B         151 kB
+Γö£ ╞Æ /api/discover-people                        0 B         151 kB
+Γö£ ╞Æ /api/follow                                 0 B         151 kB
+Γö£ ╞Æ /api/follow-status                          0 B         151 kB
+Γö£ ╞Æ /api/hackathons/analytics                   0 B         151 kB
+Γö£ ╞Æ /api/log-event                              0 B         151 kB
+Γö£ ╞Æ /api/message                                0 B         151 kB
+Γö£ ╞Æ /api/profile                                0 B         151 kB
+Γö£ ╞Æ /api/recommendations                        0 B         151 kB
+Γö£ ╞Æ /api/search-profiles                        0 B         151 kB
+Γö£ ╞Æ /api/send-message                           0 B         151 kB
+Γö£ ╞Æ /api/suggest-people                         0 B         151 kB
+Γö£ ╞Æ /api/suggest-team                           0 B         151 kB
+Γö£ ╞Æ /api/suggested-for-you                      0 B         151 kB
+Γö£ ╞Æ /api/team-recommendation                    0 B         151 kB
+Γö£ ╞Æ /api/test-usernames                         0 B         151 kB
+Γö£ ╞Æ /api/top-profiles                           0 B         151 kB
+Γöö Γùï /dashboard (623 ms)                     54.3 kB         206 kB
++ First Load JS shared by all                151 kB
+  Γö£ chunks/framework-ec21dd808c5d3f81.js    59.7 kB
+  Γö£ chunks/main-7ceff6ec650a9bb4.js         89.3 kB
+  Γöö other shared chunks (total)             2.29 kB
+
+╞Æ Middleware                                79.9 kB
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

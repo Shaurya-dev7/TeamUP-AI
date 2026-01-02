@@ -1,12 +1,19 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 type RouteParams = { params: Promise<{ teamId: string }> };
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase env variables are missing");
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 // Demo team generator for teams 100001-100050
 function generateDemoTeam(teamId: number) {
@@ -40,6 +47,7 @@ function generateDemoTeam(teamId: number) {
 
 // GET: Get team details
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const { teamId } = await params;
     const teamIdNum = parseInt(teamId);
@@ -177,6 +185,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PATCH: Update team details (leader/co_leader only)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const { teamId } = await params;
     const teamIdNum = parseInt(teamId);
@@ -284,6 +293,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE: Soft delete team (leader only)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const { teamId } = await params;
     const teamIdNum = parseInt(teamId);

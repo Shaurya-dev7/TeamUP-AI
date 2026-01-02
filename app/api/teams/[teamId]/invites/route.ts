@@ -1,15 +1,23 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 type RouteParams = { params: Promise<{ teamId: string }> };
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase env variables are missing");
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 // GET: List pending invites for this team (leader/co_leader only)
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const { teamId } = await params;
     const teamIdNum = parseInt(teamId);
@@ -94,6 +102,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST: Send invite to a user (leader/co_leader only)
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const { teamId } = await params;
     const teamIdNum = parseInt(teamId);

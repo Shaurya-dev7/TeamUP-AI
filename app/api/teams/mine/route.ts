@@ -1,20 +1,23 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Use service role for database access
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Force dynamic to prevent caching issues
-export const dynamic = "force-dynamic";
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase env variables are missing");
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function GET(request: NextRequest) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     // Authenticate user
     const authHeader = request.headers.get("Authorization");
-    // console.log("Mine API: Headers", authHeader ? "Present" : "Missing");
 
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
         creator:created_by (id, username, name)
       `)
       .in("id", teamIds)
-      .eq("status", "active") // Ensure we only get active teams
+      .eq("status", "active")
       .order("created_at", { ascending: false });
 
     if (teamsError) {
@@ -81,7 +84,6 @@ export async function GET(request: NextRequest) {
       member_count: team.team_members?.length || 0,
       roles_needed: (team.team_roles_needed || []).map((r: any) => r.role_name),
       created_at: team.created_at,
-      // Add user role context if needed? The frontend Team schema doesn't seem to use it yet but good to have logic ready
     }));
 
     return NextResponse.json({ teams });

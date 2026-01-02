@@ -1,11 +1,8 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
-// Use service role for atomic transactions and bypassing RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const teamNames = [
   "AI Innovators", "Web3 Wizards", "Cloud Crusaders", "Data Dragons", "Mobile Mavericks", 
@@ -47,6 +44,15 @@ const rolesList = [
 const joinModes = ['open', 'request', 'closed'] as const;
 
 export async function GET(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({ error: "Supabase env variables are missing" }, { status: 500 });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
   try {
     // 1. Security Check (Basic prevention of accidental public use)
     const { searchParams } = new URL(request.url);
