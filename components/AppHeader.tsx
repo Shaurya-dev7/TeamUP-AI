@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Compass, MessageCircle, Bell, User, LogOut, Sun, Moon, Sparkles, Menu, X, ChevronRight } from "lucide-react";
+import { Home, Compass, Users, MessageCircle, Bell, User, LogOut, Sun, Moon, Sparkles, Menu, X, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -30,12 +30,14 @@ function NavLink({ href, label, icon: Icon, badge }: { href: string; label: stri
         />
       )}
       <Icon className={`w-4 h-4 transition-colors duration-300 ${active ? "text-yellow-500 fill-yellow-500/20" : "group-hover:text-yellow-500"}`} />
-      <span>{label}</span>
-      {badge && (
-        <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-black">
-          {badge}
-        </span>
-      )}
+      <span className="relative">
+        {label}
+        {badge && badge > 0 && (
+          <span className="absolute -top-2 -right-3 flex h-4 w-auto min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-neutral-950 transform rotate-12 origin-bottom-left animate-in fade-in zoom-in duration-300">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </span>
     </Link>
   );
 }
@@ -45,6 +47,8 @@ export default function AppHeader() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const { scrollY } = useScroll();
 
@@ -72,8 +76,11 @@ export default function AppHeader() {
     async function loadUsername() {
       if (!session?.user) {
         setProfileUsername(null);
+        setUnreadCount(0);
         return;
       }
+      
+      // Fetch Profile
       const { data, error } = await supabase
         .from("profiles")
         .select("username")
@@ -84,8 +91,88 @@ export default function AppHeader() {
         if (error) setProfileUsername(null);
         else setProfileUsername((data as any)?.username ?? null);
       }
+      
+      
+      // Fetch Unread Notification Count
+      const { count, error: countError } = await supabase
+        .from("notifications")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", session.user.id)
+        .eq("is_read", false);
+        
+      if (!cancelled && !countError) {
+        setUnreadCount(count || 0);
+      }
+
+      // Fetch Unread Chats Count (Unique Conversations)
+      const { data: unreadChats, error: chatError } = await supabase
+        .from("message_status")
+        .select("id, messages!inner(conversation_id)")
+        .eq("user_id", session.user.id)
+        .neq("status", "read");
+
+      if (!cancelled && !chatError && unreadChats) {
+          const uniqueConvIds = new Set(unreadChats.map((uc: any) => uc.messages?.conversation_id));
+          setChatUnreadCount(uniqueConvIds.size);
+      }
     }
+    
     void loadUsername();
+
+    // Real-time subscription for notifications and chats
+    if (session?.user?.id) {
+        const channel = supabase
+          .channel(`header-updates-${session.user.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${session.user.id}`,
+            },
+            () => {
+              supabase
+                .from("notifications")
+                .select("*", { count: 'exact', head: true })
+                .eq("user_id", session.user.id)
+                .eq("is_read", false)
+                .then(({ count }) => {
+                    setUnreadCount(count || 0);
+                });
+            }
+          )
+          .on(
+            "postgres_changes",
+            {
+                event: "*", 
+                schema: "public", 
+                table: "message_status", 
+                filter: `user_id=eq.${session.user.id}`
+            }, 
+            () => {
+               // Re-fetch chat count
+               supabase
+                .from("message_status")
+                .select("id, messages!inner(conversation_id)")
+                .eq("user_id", session.user.id)
+                .neq("status", "read")
+                .then(({ data }) => {
+                    if (data) {
+                        const uniqueIds = new Set(data.map((d: any) => d.messages?.conversation_id));
+                        setChatUnreadCount(uniqueIds.size);
+                    }
+                });
+            }
+          )
+          .subscribe();
+
+        return () => {
+          cancelled = true;
+          supabase.removeChannel(channel);
+        };
+    }
+    
     return () => {
       cancelled = true;
     };
@@ -143,21 +230,21 @@ export default function AppHeader() {
         }`}>
           <NavLink href="/" label="Home" icon={Home} />
           <NavLink href="/discover" label="Discover" icon={Compass} />
-          <NavLink href="/chat" label="Chat" icon={MessageCircle} />
-          <NavLink href="/notifications" label="Notifications" icon={Bell} />
+          <NavLink href="/teams" label="Teams" icon={Users} />
+          <NavLink href="/chat" label="Chat" icon={MessageCircle} badge={chatUnreadCount > 0 ? chatUnreadCount : undefined} />
+          <NavLink href="/notifications" label="Notifications" icon={Bell} badge={unreadCount > 0 ? unreadCount : undefined} />
         </nav>
 
         {/* RIGHT ACTIONS */}
         <div className="flex items-center gap-3">
           {session?.user && !profileUsername && (
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-2 text-sm font-bold text-yellow-400 shadow-md transition-all hover:scale-105 hover:bg-black hover:shadow-lg dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-              onClick={() => router.push("/create-profile")}
+            <Link
+              href="/create-profile"
+              className="hidden sm:inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow-sm transition-all hover:bg-neutral-50 hover:text-black dark:border-neutral-800 dark:bg-black dark:text-neutral-200 dark:hover:bg-neutral-900 dark:hover:text-white"
             >
-              <Sparkles className="h-4 w-4 fill-current" />
+              <Sparkles className="h-4 w-4 text-yellow-500" />
               Create Profile
-            </button>
+            </Link>
           )}
 
           {session?.user ? (
@@ -221,16 +308,29 @@ export default function AppHeader() {
         <Link href="/discover" className="group flex flex-col items-center gap-1 text-neutral-400 dark:text-neutral-500 aria-[current=page]:text-yellow-500 dark:aria-[current=page]:text-white transition-colors">
           <Compass className="w-5 h-5 group-active:scale-95 transition-transform" />
         </Link>
+        <Link href="/teams" className="group flex flex-col items-center gap-1 text-neutral-400 dark:text-neutral-500 aria-[current=page]:text-yellow-500 dark:aria-[current=page]:text-white transition-colors">
+          <Users className="w-5 h-5 group-active:scale-95 transition-transform" />
+        </Link>
         
         <div className="relative -mt-8">
-            <div className="absolute inset-0 bg-yellow-400 blur-xl opacity-40 animate-pulse"></div>
+            <div className={`absolute inset-0 bg-yellow-400 blur-xl opacity-40 animate-pulse ${chatUnreadCount > 0 ? 'bg-red-500 opacity-60' : ''}`}></div>
              <Link href="/chat" className="relative w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center text-black shadow-lg shadow-yellow-500/30 border-4 border-white dark:border-neutral-950 transition-transform hover:scale-110 active:scale-95">
                 <MessageCircle className="w-6 h-6 fill-current" />
+                {chatUnreadCount > 0 && (
+                   <span className="absolute -top-0 -right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-neutral-900 shadow-md">
+                     {chatUnreadCount}
+                   </span>
+                )}
             </Link>
         </div>
 
-        <Link href="/notifications" className="group flex flex-col items-center gap-1 text-neutral-400 dark:text-neutral-500 aria-[current=page]:text-yellow-500 dark:aria-[current=page]:text-white transition-colors">
+        <Link href="/notifications" className="group flex flex-col items-center gap-1 text-neutral-400 dark:text-neutral-500 aria-[current=page]:text-yellow-500 dark:aria-[current=page]:text-white transition-colors relative">
           <Bell className="w-5 h-5 group-active:scale-95 transition-transform" />
+          {unreadCount > 0 && (
+             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white border-2 border-white dark:border-neutral-950 shadow-md rotate-12">
+               {unreadCount > 99 ? '!' : unreadCount}
+             </span>
+          )}
         </Link>
         <Link href={profileHref} className="group flex flex-col items-center gap-1 text-neutral-400 dark:text-neutral-500 aria-[current=page]:text-yellow-500 dark:aria-[current=page]:text-white transition-colors">
           <User className="w-5 h-5 group-active:scale-95 transition-transform" />

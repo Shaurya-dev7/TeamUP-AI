@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Create group conversation
     // @ts-ignore
-    const { data: chat, error: chatError } = await supabase.from('conversations').insert({
+    const { data: chat, error: chatError } = await (supabase as any).from('conversations').insert({
         type: 'group',
         title: name,
         // icon_url: ... optional
@@ -54,13 +54,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const allMemberIds = Array.from(new Set([userId, ...memberIds]));
     
     const membersPayload = allMemberIds.map(pid => ({
-        conversation_id: chat.id,
+        conversation_id: (chat as any).id,
         user_id: pid,
         role: pid === userId ? 'admin' : 'member'
     }));
 
     // @ts-ignore
-    const { error: membersError } = await supabase.from('conversation_participants').insert(membersPayload);
+    const { error: membersError } = await (supabase as any).from('conversation_participants').insert(membersPayload);
     
     if (membersError) {
       console.error('Error adding group members (service):', membersError);
@@ -71,8 +71,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Initial system message
     // @ts-ignore
-    const { error: msgError } = await supabase.from('messages').insert({
-      conversation_id: chat.id,
+    const { error: msgError } = await (supabase as any).from('messages').insert({
+      conversation_id: (chat as any).id,
       sender_id: userId,
       content: `created group "${name}"`,
       message_type: 'text'

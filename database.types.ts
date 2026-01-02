@@ -539,6 +539,312 @@ export type Database = {
         }
         Relationships: []
       }
+      teams: {
+        Row: {
+          id: number
+          name: string
+          description: string | null
+          goal: string | null
+          max_members: number
+          is_private: boolean
+          status: 'active' | 'archived' | 'deleted'
+          conversation_id: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          description?: string | null
+          goal?: string | null
+          max_members?: number
+          is_private?: boolean
+          status?: 'active' | 'archived' | 'deleted'
+          conversation_id?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          description?: string | null
+          goal?: string | null
+          max_members?: number
+          is_private?: boolean
+          status?: 'active' | 'archived' | 'deleted'
+          conversation_id?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      team_members: {
+        Row: {
+          id: string
+          team_id: number
+          user_id: string
+          role: 'leader' | 'co_leader' | 'member'
+          joined_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: number
+          user_id: string
+          role?: 'leader' | 'co_leader' | 'member'
+          joined_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: number
+          user_id?: string
+          role?: 'leader' | 'co_leader' | 'member'
+          joined_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      team_roles_needed: {
+        Row: {
+          id: string
+          team_id: number
+          role_name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: number
+          role_name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: number
+          role_name?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_roles_needed_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      team_join_requests: {
+        Row: {
+          id: string
+          team_id: number
+          user_id: string
+          message: string | null
+          status: 'pending' | 'accepted' | 'rejected'
+          created_at: string
+          responded_at: string | null
+          responded_by: string | null
+        }
+        Insert: {
+          id?: string
+          team_id: number
+          user_id: string
+          message?: string | null
+          status?: 'pending' | 'accepted' | 'rejected'
+          created_at?: string
+          responded_at?: string | null
+          responded_by?: string | null
+        }
+        Update: {
+          id?: string
+          team_id?: number
+          user_id?: string
+          message?: string | null
+          status?: 'pending' | 'accepted' | 'rejected'
+          created_at?: string
+          responded_at?: string | null
+          responded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_join_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      team_invites: {
+        Row: {
+          id: string
+          team_id: number
+          invited_user_id: string
+          invited_by: string
+          message: string | null
+          status: 'pending' | 'accepted' | 'declined' | 'expired'
+          created_at: string
+          expires_at: string | null
+          responded_at: string | null
+        }
+        Insert: {
+          id?: string
+          team_id: number
+          invited_user_id: string
+          invited_by: string
+          message?: string | null
+          status?: 'pending' | 'accepted' | 'declined' | 'expired'
+          created_at?: string
+          expires_at?: string | null
+          responded_at?: string | null
+        }
+        Update: {
+          id?: string
+          team_id?: number
+          invited_user_id?: string
+          invited_by?: string
+          message?: string | null
+          status?: 'pending' | 'accepted' | 'declined' | 'expired'
+          created_at?: string
+          expires_at?: string | null
+          responded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invites_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      hackathons: {
+        Row: {
+            id: string
+            external_source: string
+            external_id: string
+            title: string
+            description: string | null
+            start_date: string | null
+            end_date: string | null
+            mode: string | null
+            location: string | null
+            platform: string | null
+            url: string | null
+            image: string | null
+            cash_prize: number | null
+            prize_text: string | null
+            is_featured: boolean
+            is_active: boolean
+            clicks: number
+            views: number
+            created_at: string
+            updated_at: string
+            last_synced_at: string | null
+        }
+        Insert: {
+            id?: string
+            external_source: string
+            external_id: string
+            title: string
+            description?: string | null
+            start_date?: string | null
+            end_date?: string | null
+            mode?: string | null
+            location?: string | null
+            platform?: string | null
+            url?: string | null
+            image?: string | null
+            cash_prize?: number | null
+            prize_text?: string | null
+            is_featured?: boolean
+            is_active?: boolean
+            clicks?: number
+            views?: number
+            created_at?: string
+            updated_at?: string
+            last_synced_at?: string | null
+        }
+        Update: {
+            id?: string
+            external_source?: string
+            external_id?: string
+            title?: string
+            description?: string | null
+            start_date?: string | null
+            end_date?: string | null
+            mode?: string | null
+            location?: string | null
+            platform?: string | null
+            url?: string | null
+            image?: string | null
+            cash_prize?: number | null
+            prize_text?: string | null
+            is_featured?: boolean
+            is_active?: boolean
+            clicks?: number
+            views?: number
+            created_at?: string
+            updated_at?: string
+            last_synced_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

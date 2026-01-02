@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [mutuals, setMutuals] = useState(0);
+  const [mutualList, setMutualList] = useState<any[]>([]); // New state for mutual avatars
   const [suggested, setSuggested] = useState<any[]>([]);
 
   // Profile view tracking for ML events
@@ -239,19 +240,40 @@ export default function ProfilePage() {
                     .eq("following", data.profile.username)
                     .maybeSingle();
                  if (mounted) setIsFollowing(!!f);
-             }
 
-            // mutuals (Legacy RPC might use IDs? The user said "do not use legacy columns... from profiles". 
-            // RPC likely uses IDs. If RPC breaks because of table change, we ignore it for now or assume it works if purely ID based.)
-            // Assuming mutuals RPC is ID based and follows table change is hybrid or handled.
-            // If follows table changed to usernames, RPC 'get_mutual_connections' might break if it joins on IDs.
-            // User: "do not use legacy columns... from profiles".
-            // Since User said "stick to the column names dont jumble it" for follows table (username based), 
-            // verifying mutuals logic is out of scope unless asked. I'll wrap in try-catch to prevent crash.
-            try {
-                const { data: mutualRows } = await supabase.rpc("get_mutual_connections", { user1: userId, user2: data.profile.id } as any);
-                if (mounted) setMutuals((mutualRows as any)?.count || 0);
-            } catch (e) { console.warn("Mutuals check failed", e); }
+                 // --- Mutual Followers Logic ---
+                 // 1. Get who I follow
+                 const { data: myFollowingData } = await supabase
+                     .from('follows')
+                     .select('following')
+                     .eq('follower', myUsername);
+                 
+                 const myFollowingSet = new Set((myFollowingData || []).map((r: any) => r.following));
+
+                 // 2. Get who follows them
+                 const { data: theirFollowersData } = await supabase
+                     .from('follows')
+                     .select('follower')
+                     .eq('following', data.profile.username);
+                 
+                 const theirFollowersList = (theirFollowersData || []).map((r: any) => r.follower);
+
+                 // 3. Find Intersection
+                 const mutualUsernames = theirFollowersList.filter((u: string) => myFollowingSet.has(u));
+                 
+                 if (mounted) setMutuals(mutualUsernames.length);
+
+                 // 4. Fetch details for first 3 mutuals
+                 if (mutualUsernames.length > 0) {
+                     const { data: mutualDetails } = await supabase
+                         .from('profiles')
+                         .select('username, name, profile_picture_url')
+                         .in('username', mutualUsernames.slice(0, 3));
+                     if (mounted) setMutualList(mutualDetails || []);
+                 } else {
+                     if (mounted) setMutualList([]);
+                 }
+             }
           }
         }
       } catch (error) {
@@ -580,6 +602,40 @@ export default function ProfilePage() {
               )}
             </div>
             <div>
+              {/* Mutual Followers UI */}
+              {mutualList.length > 0 && (
+                  <div className="mb-2 flex items-center gap-2">
+                      <div className="flex -space-x-2 overflow-hidden">
+                          {mutualList.map((m, i) => (
+                              <div key={m.username} className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-neutral-950 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                                  {m.profile_picture_url ? (
+                                      <img src={m.profile_picture_url} alt={m.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                       <div className="h-full w-full flex items-center justify-center text-[8px] font-bold bg-neutral-200 dark:bg-neutral-800 text-neutral-500">
+                                           {(m.name || m.username).substring(0,2)}
+                                       </div>
+                                  )}
+                              </div>
+                          ))}
+                      </div>
+                      <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                          Followed by <span className="font-semibold text-neutral-900 dark:text-neutral-200">{mutualList[0]?.name || mutualList[0]?.username}</span>
+                          {mutualList.length > 1 && (
+                              <>
+                                  {mutualList.length === 2 ? " and " : ", "}
+                                  <span className="font-semibold text-neutral-900 dark:text-neutral-200">{mutualList[1]?.name || mutualList[1]?.username}</span>
+                              </>
+                          )}
+                          {mutuals > 2 && (
+                              <>
+                                  {" and "}
+                                  <span className="font-semibold text-neutral-900 dark:text-neutral-200">{mutuals - 2} others</span>
+                              </>
+                          )}
+                      </div>
+                  </div>
+              )}
+
               <div className="text-xl font-semibold tracking-tight">{profile.name || username}</div>
               <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">@{username}</div>
               {/* Removed bio, using college/location */}

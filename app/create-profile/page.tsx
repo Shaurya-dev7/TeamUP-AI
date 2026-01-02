@@ -27,6 +27,7 @@ import {
   X,
   AlertCircle
 } from "lucide-react";
+import CollegeAutocomplete, { CollegeSelection } from "@/components/CollegeAutocomplete";
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -44,6 +45,8 @@ export default function CreateProfilePage() {
     age: "",
     gender: "",
     college: "",
+    college_id: null as string | null,
+    college_name_raw: null as string | null,
     hostel_city: "",
     location: "",
     skills: [] as string[],
@@ -89,6 +92,8 @@ export default function CreateProfilePage() {
             age: profile.age ? String(profile.age) : "",
             gender: profile.gender || "",
             college: profile.college || "",
+            college_id: profile.college_id || null,
+            college_name_raw: profile.college_name_raw || null,
             hostel_city: profile.hostel_city || "",
             location: profile.location || "",
             skills: profile.skills ? profile.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
@@ -150,6 +155,15 @@ export default function CreateProfilePage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCollegeChange = (selection: CollegeSelection | null) => {
+    setFormData(prev => ({
+        ...prev,
+        college_id: selection?.id || null, // Prioritize ID
+        college_name_raw: selection?.isManual ? selection.name : null, // Set raw name only if manual
+        college: selection?.name || "" // Keep legacy field in sync for display
+    }));
   };
 
   const handleAddSkill = (skill: string) => {
@@ -396,12 +410,14 @@ export default function CreateProfilePage() {
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InputGroup label="College / University" className="md:col-span-2">
                      <div className="relative">
-                        <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                        <input 
-                            className="w-full pl-12 pr-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-black transition-all outline-none font-medium"
-                            placeholder="Harvard University"
-                            value={formData.college}
-                            onChange={e => handleInputChange("college", e.target.value)}
+                        {/* <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" /> */}
+                        <CollegeAutocomplete 
+                            value={formData.college ? {
+                                id: formData.college_id,
+                                name: formData.college, // Use the synced name
+                                isManual: !formData.college_id // If no ID, it's manual (or legacy)
+                            } : null}
+                            onChange={handleCollegeChange}
                         />
                      </div>
                 </InputGroup>

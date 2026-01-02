@@ -46,7 +46,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Deduplication for Direct Chats
     try {
-      const { data: memberships } = await supabase
+      // @ts-ignore
+      // @ts-ignore
+      // @ts-ignore
+      const { data: memberships } = await (supabase as any)
         .from('conversation_participants')
         .select('conversation_id, user_id')
         .in('user_id', [userId, otherId]);
@@ -62,7 +65,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (candidateIds.length > 0) {
         // Fetch conversations to check type='direct'
-        const { data: convs } = await supabase
+        // @ts-ignore
+        const { data: convs } = await (supabase as any)
           .from('conversations')
           .select('*')
           .in('id', candidateIds)
@@ -80,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Create new Conversation
     // @ts-ignore
-    const { data: conv, error: convError } = await supabase.from('conversations').insert({
+    const { data: conv, error: convError } = await (supabase as any).from('conversations').insert({
         type: 'direct'
     }).select().single();
 
@@ -91,9 +95,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Add Participants
     // @ts-ignore
-    const { error: membersError } = await supabase.from('conversation_participants').insert([
-      { conversation_id: conv.id, user_id: userId, role: 'member' },
-      { conversation_id: conv.id, user_id: otherId, role: 'member' }
+    const { error: membersError } = await (supabase as any).from('conversation_participants').insert([
+      { conversation_id: (conv as any).id, user_id: userId, role: 'member' },
+      { conversation_id: (conv as any).id, user_id: otherId, role: 'member' }
     ]);
 
     if (membersError) {

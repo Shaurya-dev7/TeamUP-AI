@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import AppHeader from "@/components/AppHeader";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 import { BackgroundEffects } from "@/components/BackgroundEffects";
 
@@ -17,21 +18,30 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 import { Toaster } from 'sonner';
+import { GlobalNotifications } from "@/components/global/GlobalNotifications";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${outfit.variable} ${jakarta.variable} scroll-smooth`}>
-      <body className="antialiased font-sans">
-        <div className="min-h-dvh bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 selection:bg-yellow-400 selection:text-neutral-900 relative">
-          <BackgroundEffects />
-          <Toaster position="top-center" richColors />
-          <div className="relative z-10">
-            <AppHeader />
-            <main className="mx-auto w-full max-w-6xl px-4 pb-24 md:pb-10 pt-24 sm:px-6 animate-fade-in">
-                {children}
-            </main>
+    <html lang="en" data-scroll-behavior="smooth" className={`${outfit.variable} ${jakarta.variable} scroll-smooth`} suppressHydrationWarning>
+      <body className="antialiased font-sans" suppressHydrationWarning>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+          <div className="min-h-dvh bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 selection:bg-yellow-400 selection:text-neutral-900 relative">
+            <BackgroundEffects />
+            <Toaster position="top-center" richColors />
+            <GlobalNotifications />
+            <div className="relative z-10">
+              <AppHeader />
+              <main className="mx-auto w-full max-w-6xl px-4 pb-24 md:pb-10 pt-24 sm:px-6 animate-fade-in">
+                  {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </ThemeProvider>
       </body>
     </html>
   );

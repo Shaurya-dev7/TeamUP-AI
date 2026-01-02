@@ -7,9 +7,15 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "sonner";
+import HackathonCard from "@/components/hackathons/HackathonCard";
+import { HackathonEvent } from "@/lib/hackathons";
+import HackathonSection from "@/components/hackathons/HackathonSection";
+import { checkProfileCompleteness } from "@/lib/profile/completeness";
 
 // Import Server Actions for Courses
 import { getTrendingCourses, getNewCourses, trackCourseClick } from "./courses/actions";
+// Import Server Actions for Hackathons
+import { getTrendingHackathons, getLiveHackathons, getUpcomingHackathons, getAllHackathons } from "@/lib/hackathons";
 
 // --- Types ---
 type Profile = {
@@ -22,63 +28,17 @@ type Profile = {
   avatar_url?: string;
   matchPercentage?: number;
   interests?: string | null;
+  age?: number | null;
+  gender?: string | null;
 };
 
-type Hackathon = {
-  id: number;
-  name: string;
-  organizer: string;
-  date: string;
-  prizes: string;
-  participants: string;
-  image: string;
-  tags: string[];
-  gradient: string;
-};
-
-// --- Mock Data ---
-const hackathons: Hackathon[] = [
-  {
-    id: 1,
-    name: "Global AI Challenge 2024",
-    organizer: "TechCrunch",
-    date: "Oct 15 - 17, 2024",
-    prizes: "$50,000 Pool",
-    participants: "1,200+",
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=300&h=200",
-    tags: ["AI/ML", "Python", "Open Source"],
-    gradient: "from-blue-600 to-purple-600",
-  },
-  {
-    id: 2,
-    name: "Web3 Innovation Jam",
-    organizer: "Ethereum Fdn",
-    date: "Nov 05 - 08, 2024",
-    prizes: "$25,000 + Grants",
-    participants: "800+",
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=300&h=200",
-    tags: ["Blockchain", "Solidity", "DeFi"],
-    gradient: "from-orange-500 to-red-500",
-  },
-  {
-    id: 3,
-    name: "Green Tech Summit",
-    organizer: "Google Devs",
-    date: "Dec 10 - 12, 2024",
-    prizes: "$30,000 Pool",
-    participants: "600+",
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=300&h=200",
-    tags: ["Sustainability", "IoT", "Cloud"],
-    gradient: "from-emerald-500 to-teal-500",
-  },
-];
-
+// --- Internships Data ---
 const internships = [
   {
     id: 1,
     role: "Frontend Developer Intern",
     company: "Vercel",
-    logo: "https://assets.vercel.com/image/upload/front/favicon/vercel/180x180.png",
+    logo: "https://api.dicebear.com/7.x/initials/svg?seed=V&backgroundColor=000000&textColor=ffffff",
     location: "Remote",
     stipend: "$1,500/month",
     duration: "6 Months",
@@ -91,7 +51,7 @@ const internships = [
     id: 2,
     role: "AI Research Intern",
     company: "OpenAI",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/4/4d/OpenAI_Logo.svg",
+    logo: "https://api.dicebear.com/7.x/initials/svg?seed=OA&backgroundColor=10a37f&textColor=ffffff",
     location: "San Francisco, CA",
     stipend: "$3,200/month",
     duration: "3 Months",
@@ -104,7 +64,7 @@ const internships = [
     id: 3,
     role: "Software Engineer Intern",
     company: "Spotify",
-    logo: "https://logo.clearbit.com/spotify.com",
+    logo: "https://api.dicebear.com/7.x/initials/svg?seed=SP&backgroundColor=1db954&textColor=ffffff",
     location: "New York, NY",
     stipend: "$2,800/month",
     duration: "Summer 2024",
@@ -117,7 +77,7 @@ const internships = [
     id: 4,
     role: "Product Design Intern",
     company: "Airbnb",
-    logo: "https://logo.clearbit.com/airbnb.com",
+    logo: "https://api.dicebear.com/7.x/initials/svg?seed=AB&backgroundColor=ff5a5f&textColor=ffffff",
     location: "Remote",
     stipend: "$2,400/month",
     duration: "4 Months",
@@ -130,7 +90,7 @@ const internships = [
     id: 5,
     role: "Cloud DevOps Intern",
     company: "Amazon Web Services",
-    logo: "https://logo.clearbit.com/amazon.com",
+    logo: "https://api.dicebear.com/7.x/initials/svg?seed=AWS&backgroundColor=ff9900&textColor=ffffff",
     location: "Seattle, WA",
     stipend: "$3,000/month",
     duration: "5 Months",
@@ -156,13 +116,34 @@ const item = {
   show: { opacity: 1, y: 0 },
 };
 
+// Demo Teams Data (50 teams)
+// join_mode: 'open' (anyone can join), 'request' (apply to join), 'closed' (invite only)
+const teamNames = ["AI Innovators", "Web3 Wizards", "Cloud Crusaders", "Data Dragons", "Mobile Mavericks", "DevOps Dynamos", "Quantum Qrew", "Cyber Sentinels", "Code Commandos", "Blockchain Brigade", "ML Masters", "Full Stack Fury", "Backend Beasts", "Frontend Force", "UX Unicorns", "API Architects", "Script Squad", "Bug Busters", "Tech Titans", "Innovation Inc", "Pixel Perfect", "Logic Lords", "Byte Battalion", "Neural Nomads", "Agile Avengers", "Sprint Stars", "Deploy Demons", "Git Guardians", "Lambda Legion", "Server Samurai", "Cloud Kings", "Data Dreamers", "Code Catalysts", "Binary Bosses", "Stack Surfers", "Hash Heroes", "Query Queens", "Merge Masters", "Commit Crew", "Branch Bandits", "Pull Pirates", "Push Pioneers", "Build Breakers", "Test Titans", "Debug Divas", "Lint Lords", "Parse Patrol", "Compile Clan", "Runtime Rebels", "Exception Elite"];
+const teamGoals = ["AI/ML Hackathon", "Web3 DeFi Project", "Cloud Architecture", "Data Science", "Mobile App Dev", "DevOps Automation", "Quantum Computing", "Cybersecurity", "Open Source", "Blockchain DApps", "Deep Learning", "Full Stack App", "API Development", "UI/UX Design", "IoT Solutions", "Game Development", "AR/VR Project", "Fintech Solution", "EdTech Platform", "HealthTech App"];
+const rolesList = ["Frontend Dev", "Backend Dev", "ML Engineer", "DevOps", "Designer", "Data Scientist", "Mobile Dev", "QA Engineer", "Product Manager", "Blockchain Dev"];
+const joinModes = ['open', 'request', 'closed'] as const;
+
+const demoTeams = Array.from({ length: 50 }, (_, i) => ({
+  id: 100001 + i,
+  name: teamNames[i % teamNames.length],
+  goal: teamGoals[i % teamGoals.length],
+  join_mode: joinModes[i % 3], // Cycles: open, request, closed
+  max_members: 4 + (i % 4),
+  member_count: 1 + (i % 3),
+  roles_needed: [rolesList[i % rolesList.length], rolesList[(i + 3) % rolesList.length]],
+  leader: {
+    username: `leader${i + 1}`,
+    name: `Team Leader ${i + 1}`,
+  }
+}));
+
 // --- Added Icons for Filter Options ---
 const filterOptions = [
   { id: 'all', label: 'All', icon: Sparkles },
   { id: 'people', label: 'People', icon: Users },
+  { id: 'teams', label: 'Teams', icon: Users },
   { id: 'hackathons', label: 'Hackathons', icon: Trophy },
   { id: 'internships', label: 'Internships', icon: Briefcase },
-  { id: 'courses', label: 'Courses', icon: Brain },
 ] as const;
 
 export default function DiscoverPage() {
@@ -172,14 +153,18 @@ export default function DiscoverPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   const [realPeople, setRealPeople] = useState<Profile[]>([]);
+  const [hackathons, setHackathons] = useState<HackathonEvent[]>([]); // Restored for search
+  const [trendingHackathons, setTrendingHackathons] = useState<HackathonEvent[]>([]);
+  const [liveHackathons, setLiveHackathons] = useState<HackathonEvent[]>([]);
+  const [upcomingHackathons, setUpcomingHackathons] = useState<HackathonEvent[]>([]);
   const [followedUsernames, setFollowedUsernames] = useState<Set<string>>(new Set());
-  const [courses, setCourses] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
   const [blockedUsernames, setBlockedUsernames] = useState<Set<string>>(new Set());
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
 
-  // --- 1. Fetch User Session ---
+  // --- 1. Fetch User Session & Profile Completeness ---
   useEffect(() => {
     const fetchSession = async () => {
         const { data } = await supabase.auth.getSession();
@@ -187,29 +172,61 @@ export default function DiscoverPage() {
         setUserId(uid);
         
         if (uid) {
-          // Get current user's username for block checking
+          // Get current user's details
           const { data: profile } = await supabase
             .from('profiles')
-            .select('username')
+            .select('*') // Fetch all for completeness check
             .eq('id', uid)
-            .single() as { data: { username: string } | null };
-          if (profile?.username) {
-            setCurrentUsername(profile.username);
+            .single();
+            
+          if (profile) {
+            setCurrentUsername((profile as any).username);
+            // Check completeness using minimal logic (Name, Username, Age, Gender) per user request for Hackathon Apply
+            const check = checkProfileCompleteness(profile, { minimal: true }); 
+            setIsProfileComplete(check.isComplete);
           }
         }
     };
     fetchSession();
   }, []);
 
-  // --- 2. Fetch Data (Profiles, Follows, Courses) ---
+  // --- 2. Fetch Data (Profiles, Follows, Hackathons) ---
   useEffect(() => {
-    if (!userId) return;
+    const fetchHackathons = async () => {
+        try {
+            // Updated to use Server Actions
+
+            // Search Data
+            const allDocs = await getAllHackathons();
+            setHackathons(allDocs);
+
+            // Curated Sections
+            console.log("Fetching trending hackathons...");
+            const trending = await getTrendingHackathons(6); // Trending limit 6
+            console.log("Trending hackathons result:", trending);
+            setTrendingHackathons(trending);
+            
+            // Note: Live and Upcoming are now on /discover/hackathons
+            setLiveHackathons([]); 
+            setUpcomingHackathons([]);
+        } catch (e) {
+            console.error("Hackathon fetch error:", e);
+        } finally {
+            // Ensure loading is set to false after hackathon fetch
+            setLoading(false);
+        }
+    };
+    fetchHackathons();
+
+    if (!userId) {
+        setLoading(false); // If no user, we still show hackathons, so stop loading
+        return;
+    }
 
     const fetchData = async () => {
         setLoading(true);
         if (searchQuery.trim()) {
             // Server-side search for profiles
-            // We use 'or' to search across multiple columns (username, name, skills)
             let query = supabase
                 .from('profiles')
                 .select('id, name, username, skills, college, location')
@@ -224,7 +241,7 @@ export default function DiscoverPage() {
                 setRealPeople(profilesData);
             }
         } else {
-            // Default: Fetch Recommendations
+             // Recommendation Logic
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token;
@@ -258,38 +275,18 @@ export default function DiscoverPage() {
             }
         }
 
-        // Fetch Courses (Trending with fallback to New)
-        // Only fetch courses if we are not deep-searching for people (optimization)
-        if (!courses.length) {
-             try {
-                let fetchedCourses = await getTrendingCourses();
-                // If few trending courses, pad with new courses
-                if (!fetchedCourses || fetchedCourses.length < 3) {
-                    const newCoursesList = await getNewCourses();
-                    // Filter out duplicates if any
-                    const existingIds = new Set(fetchedCourses.map((c: any) => c.course_id));
-                    const extras = (newCoursesList as any[]).filter(c => !existingIds.has(c.course_id));
-                    fetchedCourses = [...fetchedCourses, ...extras];
-                }
-                // Limit to 4 for the preview grid
-                setCourses(fetchedCourses.slice(0, 4));
-            } catch (e) {
-                console.error("Error fetching preview courses:", e);
-            }
-        }
-
         setLoading(false);
     };
 
-    // Debounce the fetch if searching
+    // Debounce
     const timeout = setTimeout(() => {
         fetchData();
     }, searchQuery ? 500 : 0);
 
     return () => clearTimeout(timeout);
-  }, [userId, searchQuery]);
+  }, [userId, searchQuery, currentUsername]);
 
-  // --- 2b. Fetch Blocked Users ---
+  // --- 3. Block Logic ---
   useEffect(() => {
     if (!currentUsername) return;
 
@@ -300,14 +297,14 @@ export default function DiscoverPage() {
         if (!token) return;
 
         // Fetch all users I've blocked
-        // @ts-ignore - blocks table exists but not in generated types
+        // @ts-ignore
         const { data: myBlocks } = await supabase
           .from('blocks')
           .select('blocked_username')
           .eq('blocker_username', currentUsername);
 
         // Fetch all users who've blocked me
-        // @ts-ignore - blocks table exists but not in generated types
+        // @ts-ignore
         const { data: blockedByOthers } = await supabase
           .from('blocks')
           .select('blocker_username')
@@ -315,12 +312,10 @@ export default function DiscoverPage() {
 
         const blockedSet = new Set<string>();
         
-        // Add users I've blocked
         (myBlocks as any[] || []).forEach((b: any) => {
           if (b.blocked_username) blockedSet.add(b.blocked_username.toLowerCase());
         });
         
-        // Add users who've blocked me
         (blockedByOthers as any[] || []).forEach((b: any) => {
           if (b.blocker_username) blockedSet.add(b.blocker_username.toLowerCase());
         });
@@ -332,7 +327,7 @@ export default function DiscoverPage() {
     })();
   }, [currentUsername, supabase]);
 
-  // --- 3. Follow Logic ---
+  // --- 4. Follow Logic ---
   const toggleFollow = async (targetUsername: string) => {
     if (!userId || !currentUsername) return;
 
@@ -376,21 +371,9 @@ export default function DiscoverPage() {
     }
   };
 
-  // --- 4. Course Click Logic ---
-  const handleCourseClick = async (courseId: string, fallbackUrl: string) => {
-      try {
-          const url = await trackCourseClick(courseId, "discover_home_preview");
-          if (url) window.open(url, "_blank");
-          else if (fallbackUrl) window.open(fallbackUrl, "_blank");
-      } catch (e) {
-          console.error("Track failed", e);
-          if (fallbackUrl) window.open(fallbackUrl, "_blank");
-      }
-  };
+  // --- 5. Course Click Logic --- (REMOVED)
 
-
-  // --- 5. Filtering Logic ---
-  // Filter out blocked users from people results
+  // --- 6. Filtering Logic ---
   const filteredPeople = realPeople.filter(person => 
     !blockedUsernames.has(person.username.toLowerCase())
   );
@@ -402,35 +385,26 @@ export default function DiscoverPage() {
     i.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
-  const filteredCourses = courses.filter(c => 
-    (filter === 'all' || filter === 'courses') &&
-    (c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (c.platform && c.platform.toLowerCase().includes(searchQuery.toLowerCase())))
-  );
-
   const filteredHackathons = hackathons.filter(h => 
     (filter === 'all' || filter === 'hackathons') &&
-    (h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    h.organizer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    h.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
+    (h.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.organizer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.mode?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const hasResults = filteredPeople.length > 0 || filteredInternships.length > 0 || filteredCourses.length > 0 || filteredHackathons.length > 0;
+  const hasResults = filteredPeople.length > 0 || filteredInternships.length > 0 || filteredHackathons.length > 0;
   
-  // Helper to get current filter label/icon
   const currentFilter = filterOptions.find(f => f.id === filter) || filterOptions[0];
   const FilterIcon = currentFilter.icon;
 
   return (
     <div className="min-h-screen pb-20 pt-10 relative overflow-hidden">
-
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
         
         {/* --- HERO SECTION --- */}
         <div className="text-center space-y-6 max-w-3xl mx-auto">
-      <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-6xl">
             Discover your <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-600">Future Path</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-neutral-600 dark:text-neutral-300">
@@ -655,82 +629,51 @@ export default function DiscoverPage() {
         </motion.div>
         )}
 
-        {/* --- HACKATHONS SECTION (MOCK) --- */}
-        {(filter === 'all' || filter === 'hackathons') && filteredHackathons.length > 0 && (
-        <div className="space-y-6">
-            <div className="flex items-end justify-between px-2">
-                <div>
-                   <h2 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2">
-                        <Trophy className="h-6 w-6 text-yellow-500" />
-                        {searchQuery ? `Hackathons matching "${searchQuery}"` : "Trending Hackathons"}
-                   </h2>
-                   <p className="mt-2 text-neutral-500 dark:text-neutral-400">Compete, build, and win big in upcoming events.</p>
-                </div>
-                <Link href="/discover/hackathons" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white flex items-center gap-1">
-                    View all <ArrowRight className="h-4 w-4" />
-                </Link>
+
+        {/* --- TEAMS LINK (Moved to standalone page) --- */}
+        {(filter === 'all' || filter === 'people') && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-2xl border border-yellow-200 dark:border-yellow-800/50 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/10 dark:to-orange-900/10 p-6 text-center"
+          >
+            <div className="mx-auto mb-3 h-14 w-14 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/25">
+              <Users className="h-7 w-7 text-neutral-900" />
             </div>
-
-            <motion.div 
-                variants={container}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-100px" }}
-                className="grid gap-6 md:grid-cols-3"
+            <h3 className="font-bold text-neutral-900 dark:text-white mb-1">Looking for a Team?</h3>
+            <p className="text-sm text-neutral-500 mb-4">Browse teams or create your own hackathon squad</p>
+            <Link 
+              href="/teams"
+              className="inline-flex items-center gap-2 rounded-xl bg-yellow-400 px-6 py-3 font-bold text-neutral-900 hover:bg-yellow-500 transition-colors"
             >
-                {filteredHackathons.map((hackathon) => (
-                    <motion.div key={hackathon.id} variants={item} className="group relative cursor-pointer">
-                        <div className="absolute inset-0 bg-gradient-to-r from-neutral-200 to-neutral-100 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl transform transition-transform duration-300 group-hover:scale-[1.02] -z-10 shadow-xl" />
-                        
-                        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 h-full flex flex-col">
-                            {/* Image Header with Gradient Overlay */}
-                            <div className="h-32 w-full relative overflow-hidden">
-                                {filteredHackathons.indexOf(hackathon) === 0 && (
-                                    <div className="absolute top-4 left-4 z-20 px-2 py-1 bg-red-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-lg">New</div>
-                                )}
-                                <div className={`absolute inset-0 bg-gradient-to-r ${hackathon.gradient} opacity-80 mix-blend-multiply dark:mix-blend-overlay z-10`} />
-                                <img src={hackathon.image} alt={hackathon.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
-                                <div className="absolute top-4 right-4 z-20 bg-white/90 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1 shadow-sm">
-                                    <Calendar className="w-3 h-3" />
-                                    {hackathon.date}
-                                </div>
-                            </div>
+              <Users className="h-5 w-5" />
+              Explore Teams
+            </Link>
+          </motion.div>
+        )}
 
-                            <div className="p-6 flex flex-col items-start gap-3 flex-1">
-                                <div>
-                                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1">{hackathon.organizer}</p>
-                                    <h3 className="text-xl font-bold text-neutral-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500 transition-all">
-                                        {hackathon.name}
-                                    </h3>
-                                </div>
+        {/* --- HACKATHONS SECTION (REAL) --- */}
+        {/* --- HACKATHONS SECTION (CURATED) --- */}
+        {/* --- HACKATHONS SECTION (REAL) --- */}
+        {/* --- HACKATHONS SECTION (CURATED) --- */}
+        {(filter === 'all' || filter === 'hackathons') && (
+        <div className="space-y-20">
+            {/* 1. Trending (or Search Results) */}
+            <HackathonSection 
+                title={searchQuery ? "Search Results" : "🔥 Trending Hackathons"} 
+                subtitle={searchQuery ? `Found ${filteredHackathons.length} matches` : "The hottest events happening right now."}
+                icon={Trophy}
+                category="trending"
+                hackathons={searchQuery ? filteredHackathons : trendingHackathons}
+                userId={userId}
+                isProfileComplete={isProfileComplete}
+                loading={loading}
+            />
 
-                                <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400 mt-auto">
-                                    <div className="flex items-center gap-1.5">
-                                        <Trophy className="w-4 h-4 text-yellow-500" />
-                                        <span className="font-semibold text-neutral-900 dark:text-white">{hackathon.prizes}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                        <span>{hackathon.participants} registered</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2 mt-4 w-full">
-                                    {hackathon.tags.map(tag => (
-                                        <span key={tag} className="text-[10px] font-bold px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-                                
-                                <button className="w-full mt-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                                    View Details
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </motion.div>
+            {/* 2. Live Hackathons (MOVED TO /discover/hackathons) */}
+            
+            {/* 3. Upcoming Hackathons (MOVED TO /discover/hackathons) */}
         </div>
         )}
 
@@ -809,74 +752,6 @@ export default function DiscoverPage() {
         </div>
         )}
 
-
-         {/* --- COURSES SECTION --- */}
-         {(filter === 'all' || filter === 'courses') && filteredCourses.length > 0 && (
-         <div className="space-y-8 pb-20">
-            <div className="flex items-end justify-between px-2">
-                 <div>
-                   <h2 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2">
-                        <Brain className="h-6 w-6 text-yellow-500" />
-                         {searchQuery ? `Courses matching "${searchQuery}"` : "Recommended Courses"}
-                   </h2>
-                   <p className="mt-2 text-neutral-500 dark:text-neutral-400">Upskill yourself with these trending government courses.</p>
-                </div>
-                 <Link href="/discover/courses" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white flex items-center gap-1">
-                    View all <ArrowRight className="h-4 w-4" />
-                </Link>
-            </div>
-
-             <motion.div 
-                 variants={container}
-                 initial="hidden"
-                 whileInView="show"
-                 viewport={{ once: true, margin: "-100px" }}
-                 className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
-            >
-                 {filteredCourses.map((course, index) => {
-                    const gradients = [
-                        "from-blue-600 to-purple-600",
-                        "from-emerald-500 to-teal-600",
-                        "from-orange-500 to-red-600",
-                        "from-pink-500 to-rose-600",
-                        "from-indigo-500 to-blue-600",
-                        "from-violet-600 to-fuchsia-600"
-                    ];
-                    // Deterministic gradient based on index or course ID char code sum
-                    const gradient = gradients[index % gradients.length];
-
-                    return (
-                    <motion.div key={course.course_id} variants={item} className="group cursor-pointer" onClick={() => handleCourseClick(course.course_id, course.redirect_url)}>
-                        <div className="relative overflow-hidden rounded-3xl bg-neutral-900 dark:bg-neutral-900 text-white shadow-xl aspect-[4/5] flex flex-col justify-between p-6 transition-all hover:-translate-y-2 hover:shadow-2xl">
-                             {/* Background Gradient - Randomized or consistent based on ID? */}
-                             <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-90 group-hover:opacity-100 transition-opacity`}/>
-                             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
-                            
-                             <div className="relative z-10">
-                                <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4 shadow-sm border border-white/10">
-                                     <Brain className="h-6 w-6" />
-                                </div>
-                                <h3 className="text-2xl font-bold leading-tight line-clamp-3 mb-2">{course.title}</h3>
-                                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10">
-                                    <p className="text-white/90 text-xs font-bold uppercase tracking-wider">{course.platform}</p>
-                                </div>
-                             </div>
-
-                             <div className="relative z-10 space-y-4">
-                                 <div className="flex items-center gap-1 text-sm font-medium text-white/90">
-                                     <Globe className="w-4 h-4 opacity-75" />
-                                     <span>{course.language}</span>
-                                 </div>
-                                 <button className="w-full py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 font-bold hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 group-hover:bg-white group-hover:text-black">
-                                    Start Learning <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                 </button>
-                             </div>
-                        </div>
-                    </motion.div>
-                 )})}
-            </motion.div>
-         </div>
-         )}
       </div>
     </div>
   );

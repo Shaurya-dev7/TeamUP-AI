@@ -106,11 +106,13 @@ export default function Home() {
 
 // --- Components ---
 
+import HeroCarousel from "@/components/HeroCarousel";
+
 function Hero() {
   const targetRef = useRef(null);
   
   return (
-    <section ref={targetRef} className="relative overflow-hidden pt-24 pb-20 lg:pt-48 lg:pb-40">
+    <section ref={targetRef} className="relative overflow-hidden pt-24 pb-20 lg:pt-32 lg:pb-32">
       <PremiumBackgroundGrid />
       
       {/* Background Orbs - Stabilized */}
@@ -199,31 +201,14 @@ function Hero() {
           </Link>
         </motion.div>
         
-        {/* PARALLAX CARD with Will-Change optimization */}
+        {/* CAROUSEL SECTION */}
         <motion.div
            initial={{ opacity: 0, y: 50, rotateX: 10 }}
            animate={{ opacity: 1, y: 0, rotateX: 0 }}
            transition={{ duration: 1, delay: 0.4, type: "spring", stiffness: 60 }} 
-           className="relative mt-24 mx-auto max-w-5xl perspective-1000 will-change-transform"
+           className="relative mt-20 mx-auto w-full px-2 sm:px-0"
         >
-            <div className="rounded-3xl border border-neutral-200/60 bg-white/40 p-3 shadow-2xl backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/40 ring-1 ring-white/50 dark:ring-white/10">
-                 <div className="aspect-[16/8] rounded-2xl bg-neutral-100/50 dark:bg-neutral-900/50 overflow-hidden relative flex items-center justify-center group">
-                    
-                    {/* REMOVED Inner Grid as per user request to improve visual clarity */}
-                    
-                    {/* Floating Orbs - Static positioning with pulse for performance */}
-                    <div className="absolute top-10 left-10 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-10 right-10 w-40 h-40 bg-yellow-400/20 rounded-full blur-3xl animate-delay-1000 animate-pulse" />
-
-                    {/* Main Match Card - Tilt Effect */}
-                    <TiltCard />
-
-                    {/* Floating Elements (Adjusted Positions to prevent overlap) */}
-                     <FloatingBadge delay={1.0} x={-180} y={-100} icon="🤝" title="Mutual" subtitle="You both know Rahul" color="bg-blue-100 dark:bg-blue-900/30 dark:text-blue-100" />
-                     <FloatingBadge delay={1.2} x={180} y={80} icon="🎓" title="Alumni" subtitle="Both from IIT Delhi" color="bg-purple-100 dark:bg-purple-900/30 dark:text-purple-100" />
-
-                 </div>
-             </div>
+            <HeroCarousel />
         </motion.div>
       </div>
     </section>

@@ -7,7 +7,8 @@ import { ChatBackground } from "@/components/chat/ChatBackground";
 import { Conversation, ConversationList } from "@/components/chat/ConversationList";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { Message, MessageBubble } from "@/components/chat/MessageBubble";
-import { X, Users, Menu, Plus, ArrowLeft, Check, UserPlus, LogOut, Shield, Crown, Trash2, Info, MoreHorizontal } from "lucide-react";
+import { TypingBubble } from "@/components/chat/TypingBubble";
+import { X, Users, Menu, Plus, ArrowLeft, Check, UserPlus, LogOut, Shield, Crown, Trash2, Info, MoreHorizontal, Pin, PinOff } from "lucide-react";
 
 
 
@@ -128,7 +129,7 @@ export default function ChatClient() {
             // @ts-ignore
             const { data: allParticipants, error: allPartError } = await supabase
                 .from('conversation_participants')
-                .select('conversation_id, user_id, role, profiles(id, username, name)')
+                .select('conversation_id, user_id, role, profiles(id, username, name, age, gender)')
                 .in('conversation_id', convIds);
 
             if (allPartError) console.error("Error fetching all participants:", allPartError);
@@ -242,21 +243,186 @@ export default function ChatClient() {
     }, [conversations, onlineUsers]);
 
 
-    // 3. Active Chat Messages & Read Receipts
+    // --- Advanced Features State ---
+    const [replyingTo, setReplyingTo] = useState<Message|null>(null);
+
+    const handleReply = (msg: Message) => {
+        setReplyingTo(msg);
+    };
+
+    const handleCancelReply = () => {
+        setReplyingTo(null);
+    };
+
+    const handleDeleteMessage = async (msgId: string) => {
+        if (!confirm("Are you sure you want to delete this message?")) return;
+        
+        // Optimistic update
+        setMessages(prev => prev.map(m => 
+            m.id === msgId ? { ...m, content: "🚫 This message was deleted", message_type: 'text', file_url: null } : m
+        ));
+
+        const { error } = await supabase
+            // @ts-ignore
+            .update({ content: "🚫 This message was deleted", message_type: 'text', file_url: null })
+            .eq('id', msgId);
+
+        if (error) { 
+            console.error("Delete failed", error);
+        }
+    };
+
+    const handlePinMessage = async (msgId: string, currentStatus: boolean) => {
+        if (!selectedConvId) return;
+        
+        // Optimistic Update
+        setMessages(prev => prev.map(m => {
+            if (m.conversation_id !== selectedConvId) return m; // Safety check
+            if (m.id === msgId) return { ...m, is_pinned: !currentStatus };
+            // If pinning new one, unpin others
+            if (!currentStatus && m.is_pinned) return { ...m, is_pinned: false }; 
+            return m;
+        }));
+
+        try {
+            if (currentStatus) {
+                // Unpinning
+                // @ts-ignore
+                await supabase.from('messages').update({ is_pinned: false }).eq('id', msgId);
+            } else {
+                // Pinning (Transaction-like: Unpin all, then pin this)
+                // Note: RLS might restrict updating others' messages if "pinned_by" isn't handled or if policy is strict.
+                // Assuming "chat_members" allows updating "is_pinned" for any message in the chat.
+                // @ts-ignore
+                await supabase.from('messages').update({ is_pinned: false }).eq('conversation_id', selectedConvId);
+                // @ts-ignore
+                await supabase.from('messages').update({ is_pinned: true, pinned_by: sessionUserId, pinned_at: new Date().toISOString() }).eq('id', msgId);
+            }
+        } catch (e) {
+            console.error("Pinning failed", e);
+            // Revert state if needed, or rely on realtime to fix
+        }
+    };
+
+    const pinnedMessage = messages.find(m => m.is_pinned);
+
+    const handleLocation = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const link = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+            await handleSendMessage(link, 'location');
+        }, (err) => {
+            console.error(err);
+            alert("Unable to retrieve location");
+        });
+    };
+
+    // --- Typing State ---
+    const [isTyping, setIsTyping] = useState(false);
+    const [typingUsers, setTypingUsers] = useState<Record<string, string>>({}); // userId -> username
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleInputChange = (val: string) => {
+        setInput(val);
+        
+        if (!selectedConvId || !sessionUserId) return;
+
+        // Broadcast Typing
+        if (!isTyping) {
+            setIsTyping(true);
+            const channel = supabase.channel(`conv:${selectedConvId}`);
+            channel.send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: { userId: sessionUserId, username: currentUserUsername || 'Someone' }
+            });
+        }
+
+        // Debounce stop typing
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+        }, 3000);
+    };
+
+    const [isSending, setIsSending] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
+
+    const handleSendMessage = async (val: string, type: 'text'|'location' = 'text') => { 
+        if (!selectedConvId || !sessionUserId || (!val.trim() && type === 'text')) return;
+        
+        // Profile Completeness Check (Minimal: Name required)
+        const currentConv = conversationsWithPresence.find(c => c.id === selectedConvId);
+        // @ts-ignore
+        const me = currentConv?.participants?.find((p: any) => p.user_id === sessionUserId)?.user;
+        
+        if (me) {
+            if (!me.name || !me.username || !me.age || !me.gender) {
+                alert("Profile incomplete. Mandatory fields: Name, Username, Age, Gender.");
+                return;
+            }
+        }
+        
+        setIsSending(true);
+        setSendError(null);
+
+        let finalContent = val.trim();
+        // Prepend Reply Context if exists
+        if (replyingTo && type === 'text') {
+            const shortQuote = replyingTo.content.substring(0, 50).replace(/\n/g, ' ');
+            // Hidden tag format: [reply:ID]
+            finalContent = `> [reply:${replyingTo.id}] ${shortQuote}${replyingTo.content.length > 50 ? '...' : ''}\n${finalContent}`;
+        }
+
+        try {
+            // @ts-ignore
+            const { error } = await supabase.from('messages').insert({
+                conversation_id: selectedConvId,
+                sender_id: sessionUserId,
+                content: finalContent,
+                message_type: type
+            });
+            
+            if (error) throw error;
+
+            setInput(""); // Synced clear for local state
+            setReplyingTo(null); // Clear reply state
+            setIsTyping(false); // Stop typing immediately
+
+        } catch (error: any) {
+            console.error("Send failed", error);
+            setSendError(val); // Save original text for retry
+            alert(`Failed to send message: ${error.message || 'Unknown error'}`);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    // --- Active Chat Subscription (Messages + Typing + Read Receipts) ---
     useEffect(() => {
         if (!selectedConvId || !sessionUserId) {
             setMessages([]);
+            setTypingUsers({});
             return;
         }
 
+        // 1. Initial Load
         const loadMessages = async () => {
              // @ts-ignore
              const { data, error } = await supabase
                 .from('messages')
-                .select('*, sender:profiles(username)')
+                .select('*, sender:profiles!messages_sender_id_fkey(username)')
                 .eq('conversation_id', selectedConvId)
                 .order('created_at', { ascending: true });
             
+             if (error) {
+                 console.error("Error loading messages (serialized):", JSON.stringify(error, null, 2));
+                 return;
+             }
+
              if (data) {
                  // Mark unread as read immediately
                  // @ts-ignore
@@ -265,7 +431,7 @@ export default function ChatClient() {
                     .update({ status: 'read', updated_at: new Date().toISOString() })
                     .eq('user_id', sessionUserId)
                     .in('message_id', (data as any[]).map((m: any) => m.id))
-                    .neq('status', 'read'); // Only update if not already read
+                    .neq('status', 'read'); 
 
                  const mapped: Message[] = (data as any[]).map((m: any) => ({
                     ...m,
@@ -273,30 +439,28 @@ export default function ChatClient() {
                  }));
                  setMessages(mapped);
                  
-                 // Fetch latest statuses for MY messages to show ticks
-                 // @ts-ignore
-                 const { data: statusData } = await supabase
-                    .from('message_status')
-                    .select('message_id, status')
-                    .in('message_id', mapped.filter(m => m.is_me).map(m => m.id));
-                 
-                 if (statusData) {
-                     setMessages(prev => prev.map(m => {
-                         if (!m.is_me) return m;
-                         // For 1:1, usually 1 status row per message per recipient.
-                         // We'll take the 'best' status (read > delivered > sent)
-                         // But simplify: if ANYONE read it, it's read?
-                         // @ts-ignore
-                         const s = (statusData as any[])?.find((s:any) => s.message_id === m.id);
-                         return s ? { ...m, status: s.status } : m;
-                     }));
+                 // Fetch statuses for MY messages
+                 if (mapped.some(m => m.is_me)) {
+                    // @ts-ignore
+                    const { data: statusData } = await supabase
+                        .from('message_status')
+                        .select('message_id, status')
+                        .in('message_id', mapped.filter(m => m.is_me).map(m => m.id));
+                    
+                    if (statusData) {
+                        setMessages(prev => prev.map(m => {
+                            if (!m.is_me) return m;
+                            // @ts-ignore
+                            const s = (statusData as any[])?.find((s:any) => s.message_id === m.id);
+                            return s ? { ...m, status: s.status } : m;
+                        }));
+                    }
                  }
              }
         };
-
         loadMessages();
         
-        // Subscription for THIS chat
+        // 2. Subscription
         const channel = supabase.channel(`conv:${selectedConvId}`)
             .on('postgres_changes', { 
                 event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedConvId}`
@@ -309,21 +473,22 @@ export default function ChatClient() {
                     return [...prev, { ...newMsg, is_me: newMsg.sender_id === sessionUserId }];
                 });
 
-                // If NOT me, mark as read immediately since I'm looking at it
+                // If NOT me, mark as read immediately
                 if (newMsg.sender_id !== sessionUserId) {
-                    // @ts-ignore
-                    await supabase.from('message_status')
+                    try {
                         // @ts-ignore
-                        .update({ status: 'read', updated_at: new Date().toISOString() })
-                        .eq('message_id', newMsg.id)
-                        .eq('user_id', sessionUserId);
+                        await supabase.from('message_status')
+                            // @ts-ignore
+                            .update({ status: 'read', updated_at: new Date().toISOString() })
+                            .eq('message_id', newMsg.id)
+                            .eq('user_id', sessionUserId);
+                    } catch (e) { console.error("Failed to mark read", e); }
                 }
             })
             // Listen for status updates (ticks)
              .on('postgres_changes', {
                 event: 'UPDATE', schema: 'public', table: 'message_status'
             }, (payload) => {
-                 console.log("Status update received:", payload);
                  setMessages(prev => prev.map(m => {
                      if (m.id === payload.new.message_id) {
                          return { ...m, status: payload.new.status };
@@ -331,114 +496,29 @@ export default function ChatClient() {
                      return m;
                  }));
             })
+            // Typing Broadcast Listener
+            .on('broadcast', { event: 'typing' }, (payload) => {
+                if (payload.payload.userId !== sessionUserId) {
+                    setTypingUsers(prev => ({
+                        ...prev,
+                        [payload.payload.userId]: payload.payload.username
+                    }));
+
+                    // Clear after 3s
+                    setTimeout(() => {
+                        setTypingUsers(prev => {
+                            const next = { ...prev };
+                            delete next[payload.payload.userId];
+                            return next;
+                        });
+                    }, 3000);
+                }
+            })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
 
     }, [selectedConvId, sessionUserId, supabase]);
-
-    // 4. Global Listener (Notifications + Sidebar Updates)
-    useEffect(() => {
-        if (!sessionUserId) return;
-
-        const globalChannel = supabase.channel(`global-messages:${sessionUserId}`)
-            .on('postgres_changes', {
-                event: 'INSERT', schema: 'public', table: 'messages'
-            }, async (payload) => {
-                const newMsg = payload.new as any;
-                const isCurrentChat = newMsg.conversation_id === selectedConvId;
-                
-                // Always refresh conversations to update Last Message / Unread Count
-                // We could do this optimistically but re-fetching is safer for sync
-                await fetchConversations();
-
-                // If NOT current chat users sent this, notify
-                if (!isCurrentChat && newMsg.sender_id !== sessionUserId) {
-                    // Get sender name
-                    // @ts-ignore
-                    const { data: sender } = await supabase.from('profiles').select('username').eq('id', newMsg.sender_id).single();
-                    // @ts-ignore
-                    const name = (sender as any)?.username || 'Someone';
-                    
-                    setNotification({
-                        sender: name,
-                        text: newMsg.content || (newMsg.message_type === 'image' ? 'Sent an image' : 'Sent a file')
-                    });
-                    
-                    // Auto dismiss
-                    setTimeout(() => setNotification(null), 5000);
-                }
-            })
-            .subscribe();
-            
-        return () => { supabase.removeChannel(globalChannel); };
-    }, [sessionUserId, supabase, fetchConversations, selectedConvId]);
-
-    // Scroll
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    // Auto-create chat from URL
-    useEffect(() => {
-        if (!sessionUserId || !initialUserId || loadingConvs) return;
-        const existing = conversations.find(c => c.type === 'direct' && c.other_user?.id === initialUserId);
-        if (existing) {
-            setSelectedConvId(existing.id);
-            setIsSidebarOpen(false);
-        } else {
-            // Create
-            (async () => {
-               try {
-                   const { data: { session } } = await supabase.auth.getSession();
-                   const token = session?.access_token;
-                   if(!token) return;
-                   const res = await fetch('/api/create-chat', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                       body: JSON.stringify({ otherId: initialUserId })
-                   });
-                   const json = await res.json();
-                   if (json.chat) {
-                       await fetchConversations();
-                       setSelectedConvId(json.chat.id);
-                       setIsSidebarOpen(false);
-                   }
-               } catch(e) { console.error(e); }
-            })();
-        }
-    }, [initialUserId, sessionUserId, loadingConvs]); // removed conversations dep to avoid loop, handled by check
-
-
-    const handleSendMessage = async (val: string) => {
-        if (!selectedConvId || !sessionUserId || !val.trim()) return;
-        
-        // Profile Completeness Check (Minimal: Name required)
-        const currentConv = conversationsWithPresence.find(c => c.id === selectedConvId);
-        // @ts-ignore
-        const me = currentConv?.participants?.find((p: any) => p.user_id === sessionUserId)?.user;
-        
-        // If we can't find 'me' (e.g. initial load), we might skip check or fetch.
-        // But usually loaded. If not loaded, we assume strictness? 
-        // Let's check if we have the profile data.
-        if (me) {
-            if (!me.name || !me.username || !me.age || !me.gender) {
-                alert("Profile incomplete. Mandatory fields: Name, Username, Age, Gender.");
-                return;
-            }
-        }
-
-        setInput(""); // Optimistic clear
-        
-        // @ts-ignore
-        const { error } = await supabase.from('messages').insert({
-            conversation_id: selectedConvId,
-            sender_id: sessionUserId,
-            content: val.trim(),
-            message_type: 'text'
-        });
-        if (error) console.error("Send failed", error);
-    };
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
@@ -1057,6 +1137,35 @@ export default function ChatClient() {
                             </div>
                         )}
 
+                        {/* Pinned Message Banner */}
+                        {pinnedMessage && (
+                            <div className="w-full z-10 bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm border-b border-yellow-100 dark:border-yellow-900/30 px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2">
+                                <div className="w-1 bg-yellow-400 self-stretch rounded-full" />
+                                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => {
+                                    const el = document.getElementById(`msg-${pinnedMessage.id}`);
+                                    if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }}>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <Pin className="w-3 h-3 text-yellow-600 dark:text-yellow-500 fill-current" />
+                                        <span className="text-xs font-bold text-yellow-700 dark:text-yellow-500 uppercase tracking-wide">Pinned Message</span>
+                                    </div>
+                                    <p className="text-sm text-neutral-700 dark:text-neutral-300 truncate font-medium">
+                                        {pinnedMessage.content}
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation(); 
+                                        handlePinMessage(pinnedMessage.id, true);
+                                    }} 
+                                    className="p-1.5 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/30 rounded-full text-yellow-600/70 hover:text-yellow-700 dark:text-yellow-500/70 dark:hover:text-yellow-400 transition-colors"
+                                    title="Unpin"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar space-y-6">
                             {messages.map((m, i) => {
@@ -1066,16 +1175,59 @@ export default function ChatClient() {
                                 // @ts-ignore
                                 const senderName = senderParticipant?.user?.username || m.sender?.username || "Unknown";
                                 
+    const handleJumpTo = (msgId: string) => {
+        const el = document.getElementById(`msg-${msgId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Highlight effect
+            el.classList.add('bg-blue-100/50', 'dark:bg-blue-900/20', 'transition-colors', 'duration-500');
+            setTimeout(() => {
+                el.classList.remove('bg-blue-100/50', 'dark:bg-blue-900/20');
+            }, 1000);
+        } else {
+             alert("Message not found (might be too old)");
+        }
+    };
+
+    return (
+        <div id={`msg-${m.id}`} key={m.id} className="rounded-xl"> {/* Added rounded-xl for highlight */}
+            <MessageBubble 
+                message={m} 
+                isMe={m.is_me || false} 
+                senderName={senderName}
+                showName={activeConv.type === 'group'} 
+                onReply={handleReply}
+                onDelete={handleDeleteMessage}
+                onPin={handlePinMessage}
+                onJumpTo={handleJumpTo}
+                isAdmin={true}
+            />
+        </div>
+    );
+                            })}
+                            
+                            {/* Typing Indicators */}
+                            {Object.entries(typingUsers).map(([userId, username]) => {
+                                // Find user details if possible
+                                // @ts-ignore
+                                const participant = activeConv.participants?.find((p: any) => p.user_id === userId);
+                                const displayName = participant?.user?.username || username || "Someone";
+                                
                                 return (
-                                    <MessageBubble 
-                                        key={m.id} 
-                                        message={m} 
-                                        isMe={m.is_me || false} 
-                                        senderName={senderName}
-                                        showName={activeConv.type === 'group'} 
-                                    />
+                                    <div key={userId} className="flex flex-col items-start space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        {activeConv.type === 'group' && (
+                                             <div className="flex items-center gap-2 ml-1">
+                                                <div className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
+                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`} alt={displayName} className="w-full h-full object-cover" />
+                                                </div>
+                                                <span className="text-[10px] text-neutral-500">{displayName} is typing...</span>
+                                             </div>
+                                        )}
+                                        <TypingBubble />
+                                    </div>
                                 );
                             })}
+
                             <div ref={messagesEndRef} />
                         </div>
 
@@ -1083,9 +1235,16 @@ export default function ChatClient() {
                         <div className="p-4 md:p-6 bg-white/60 dark:bg-black/60 backdrop-blur-xl border-t border-neutral-200/50 dark:border-neutral-800/50">
                             <ChatInput 
                                 value={input} 
-                                onChange={setInput} 
+                                onChange={handleInputChange} 
                                 onSend={() => handleSendMessage(input)} 
                                 disabled={false} 
+                                replyingTo={replyingTo ? {
+                                    // @ts-ignore
+                                    sender: replyingTo.sender?.username || 'Unknown',
+                                    content: replyingTo.content
+                                } : null}
+                                onCancelReply={handleCancelReply}
+                                onLocation={handleLocation}
                             />
                         </div>
                     </>

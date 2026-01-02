@@ -32,6 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     age, 
     gender, 
     college, 
+    college_id,
+    college_name_raw,
     hostel_city, 
     location, 
     skills, // comma-separated string
@@ -58,6 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       age: age ? parseInt(age) : null,
       gender,
       college,
+      college_id,
+      college_name_raw,
       hostel_city,
       location,
       skills,
@@ -77,8 +81,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (profileErr) {
       console.error('Profile Upsert Error:', profileErr);
-      // Fallback: If 'is_demo' or other columns don't exist and error, we might need a retry without them.
-      // But we assume the migration ran.
+
+      // Graceful Fallback: If migration hasn't run, retry without database-only columns
+      if (profileErr.message.includes("Could not find the 'college_id' column")) {
+        console.warn("Schema mismatch detected (missing college_id). Retrying without college fields.");
+        
+        const { error: retryErr } = await supabase.from('profiles').upsert({
+             id: userId,
+             username,
+             name,
+             age: age ? parseInt(age) : null,
+             gender,
+             college,
+             // college_id: SKIPPED
+             // college_name_raw: SKIPPED
+             hostel_city,
+             location,
+             skills,
+             hackathons_participated: hackathons_participated ? parseInt(hackathons_participated) : 0,
+             projects_completed: projects_completed ? parseInt(projects_completed) : 0,
+             achievements,
+             github_url,
+             linkedin_url,
+             profile_picture_url,
+             interests,
+             certificates: certificates || [],
+             workplace,
+             school,
+             synced_contacts: synced_contacts ? (Array.isArray(synced_contacts) ? synced_contacts : []) : []
+        });
+
+        if (retryErr) {
+             return res.status(500).json({ error: `Failed to save profile (Retry failed): ${retryErr.message}` });
+        }
+        // Success on retry
+        return res.status(200).json({ success: true, warning: "Profile saved, but College ID could not be stored due to pending database updates." });
+      }
+
       return res.status(500).json({ error: `Failed to save profile: ${profileErr.message}` });
     }
 

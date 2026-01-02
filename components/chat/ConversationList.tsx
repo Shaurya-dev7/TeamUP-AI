@@ -110,9 +110,16 @@ export function ConversationList({ conversations, selectedId, onSelect, isLoadin
             {/* Content */}
             <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline mb-0.5">
-                    <h3 className={`font-semibold truncate text-sm ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200'}`}>
-                        {displayName}
-                    </h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <h3 className={`font-semibold truncate text-sm ${isSelected ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-200'}`}>
+                            {displayName}
+                        </h3>
+                        {conv.unread_count > 0 && (
+                            <span className="shrink-0 bg-red-500 text-white text-[10px] font-bold px-1.5 h-4 min-w-[1rem] flex items-center justify-center rounded-full shadow-sm animate-in zoom-in duration-200">
+                                {conv.unread_count}
+                            </span>
+                        )}
+                    </div>
                     {conv.last_message && (
                         <span className={`text-[10px] shrink-0 ml-2 ${isSelected ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             {timeDisplay}
@@ -132,12 +139,6 @@ export function ConversationList({ conversations, selectedId, onSelect, isLoadin
                             <span className="italic opacity-80">Draft</span>
                         )}
                     </p>
-
-                    {conv.unread_count > 0 && (
-                        <span className="shrink-0 bg-green-500 text-white text-[10px] font-bold px-1.5 h-4 min-w-[1rem] flex items-center justify-center rounded-full">
-                            {conv.unread_count}
-                        </span>
-                    )}
                 </div>
             </div>
           </div>
