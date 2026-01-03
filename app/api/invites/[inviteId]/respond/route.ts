@@ -195,7 +195,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     } else {
       // Decline
       await supabaseAdmin
-        .from("team_invitations")
+        .from("team_invites")
         .update({ status: "rejected", responded_at: new Date().toISOString() })
         .eq("id", inviteId);
 

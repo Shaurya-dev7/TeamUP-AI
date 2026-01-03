@@ -197,7 +197,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "User is already a team member" }, { status: 400 });
     }
 
-    // Check for existing pending invite (unique constraint will catch this, but better UX)
+    // Check for existing pending invite
     const { data: existingInvite } = await supabaseAdmin
       .from("team_invites")
       .select("id")
@@ -208,6 +208,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (existingInvite) {
       return NextResponse.json({ error: "User already has a pending invite" }, { status: 400 });
+    }
+
+    // Check cooldown: Don't allow invite if one was sent in the last 3 days
+    // regardless of status (pending, accepted, declined, expired)
+    const COOLDOWN_DAYS = 3;
+    const cooldownDate = new Date();
+    cooldownDate.setDate(cooldownDate.getDate() - COOLDOWN_DAYS);
+
+    const { data: recentInvite } = await supabaseAdmin
+      .from("team_invites")
+      .select("created_at")
+      .eq("team_id", teamIdNum)
+      .eq("invited_user_id", user_id)
+      .gte("created_at", cooldownDate.toISOString())
+      .limit(1)
+      .maybeSingle();
+
+    if (recentInvite) {
+      return NextResponse.json({ 
+        error: `You can invite this user again after ${COOLDOWN_DAYS} days.` 
+      }, { status: 400 });
     }
 
     // Get team name and inviter info for notification
