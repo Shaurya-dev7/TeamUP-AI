@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import AppHeader from "@/components/AppHeader";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
@@ -36,12 +37,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <GlobalNotifications />
             <div className="relative z-10">
               <AppHeader />
-              <main className="mx-auto w-full max-w-6xl px-4 pb-24 md:pb-10 pt-24 sm:px-6 animate-fade-in">
+              <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-24 sm:px-6 lg:px-8 md:pb-10 animate-fade-in">
                   {children}
               </main>
             </div>
           </div>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );

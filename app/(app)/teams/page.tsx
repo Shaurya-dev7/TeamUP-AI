@@ -158,7 +158,7 @@ export default function TeamsPage() {
         <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-gradient-to-br from-blue-500/10 to-indigo-500/10 blur-[100px]" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-32 pt-20 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-[1440px] px-4 pb-32 pt-20 sm:px-6 lg:px-8">
         
         {/* --- Hero Section --- */}
         <div className="flex flex-col items-center text-center mb-16">

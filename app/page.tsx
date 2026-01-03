@@ -62,15 +62,15 @@ function CTA() {
             />
             
             <div className="container mx-auto relative z-10 text-center">
-                <h2 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight">Ready to build the <span className="text-yellow-500 dark:text-yellow-400">future?</span></h2>
+                <h2 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-8 tracking-tight">Ready to build the <span className="text-yellow-500 dark:text-yellow-400">future?</span></h2>
                 <p className="text-xl text-neutral-600 dark:text-neutral-400 mb-12 max-w-2xl mx-auto leading-relaxed">
                     Join thousands of developers, designers, and creators finding their dream team on TeamUp today.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-6">
-                     <Link href="/signup" className="px-10 py-5 bg-yellow-400 text-neutral-950 text-lg font-bold rounded-full hover:bg-yellow-300 transition-colors shadow-xl shadow-yellow-900/20 hover:scale-105 active:scale-95">
+                     <Link href="/signup" className="px-6 py-4 sm:px-10 sm:py-5 bg-yellow-400 text-neutral-950 text-base sm:text-lg font-bold rounded-full hover:bg-yellow-300 transition-colors shadow-xl shadow-yellow-900/20 hover:scale-105 active:scale-95">
                         Get Started for Free
                      </Link>
-                     <Link href="/discover" className="px-10 py-5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white text-lg font-bold rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800 hover:scale-105 active:scale-95">
+                     <Link href="/discover" className="px-6 py-4 sm:px-10 sm:py-5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white text-base sm:text-lg font-bold rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border border-neutral-200 dark:border-neutral-800 hover:scale-105 active:scale-95">
                         Explore Teams
                      </Link>
                 </div>
@@ -153,7 +153,7 @@ function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-          className="max-w-5xl mx-auto mb-6 text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 sm:text-7xl lg:text-8xl leading-[1.1]"
+          className="max-w-5xl mx-auto mb-6 text-4xl sm:text-5xl lg:text-8xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 leading-[1.1]"
         >
           Find your perfect <br className="hidden sm:block"/>
           <span className="relative inline-block">

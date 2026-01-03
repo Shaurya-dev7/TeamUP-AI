@@ -400,7 +400,7 @@ export default function DiscoverPage() {
   return (
     <div className="min-h-screen pb-20 pt-10 relative overflow-hidden">
       
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
+      <div className="relative mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-20">
         
         {/* --- HERO SECTION --- */}
         <div className="text-center space-y-6 max-w-3xl mx-auto">

@@ -203,7 +203,7 @@ export default function AppHeader() {
          <div className="absolute inset-0 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-neutral-200/50 dark:border-white/5 supports-[backdrop-filter]:bg-white/60" />
       </div>
 
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 relative z-10">
+      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* LOGO */}
         <div className="flex items-center gap-3">
