@@ -42,7 +42,10 @@ function NavLink({ href, label, icon: Icon, badge }: { href: string; label: stri
   );
 }
 
+import { useActivityTracker } from "@/hooks/useActivityTracker";
+
 export default function AppHeader() {
+  useActivityTracker();
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);

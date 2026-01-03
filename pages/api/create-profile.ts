@@ -48,7 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     certificates, // jsonb array
     workplace,
     school,
-    synced_contacts // jsonb array
+    synced_contacts, // jsonb array
+    team_invite_status // New field
   } = req.body;
 
   try {
@@ -76,7 +77,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       certificates: certificates || [],
       workplace,
       school,
-      synced_contacts: synced_contacts ? (Array.isArray(synced_contacts) ? synced_contacts : []) : [] // Ensure array if provided
+      synced_contacts: synced_contacts ? (Array.isArray(synced_contacts) ? synced_contacts : []) : [], // Ensure array if provided
+      team_invite_status: team_invite_status || 'not_in_team_open' // Default
     });
 
     if (profileErr) {

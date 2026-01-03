@@ -165,12 +165,32 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Team is full" }, { status: 400 });
     }
 
+    // Verify that the user to be invited exists and check their invite status
+    const { data: userToInvite, error: userError } = await supabaseAdmin // Changed supabase to supabaseAdmin
+      .from('profiles')
+      .select('id, team_invite_status')
+      .eq('id', user_id)
+      .single();
+
+    if (userError || !userToInvite) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // STRICT CHECK: team_invite_status
+    if (userToInvite.team_invite_status === 'in_team_not_open') {
+        return NextResponse.json({ 
+            error: 'User is not accepting team invites at this time.' 
+        }, { status: 400 });
+    }
+
+    const invitedUserId = userToInvite.id; // Define invitedUserId here
+
     // Check if user is already a member
     const { data: existingMember } = await supabaseAdmin
       .from("team_members")
       .select("id")
       .eq("team_id", teamIdNum)
-      .eq("user_id", user_id)
+      .eq("user_id", invitedUserId) // Changed user_id to invitedUserId
       .single();
 
     if (existingMember) {

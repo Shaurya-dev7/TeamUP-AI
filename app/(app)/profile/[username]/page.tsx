@@ -638,7 +638,44 @@ export default function ProfilePage() {
 
               <div className="text-xl font-semibold tracking-tight">{profile.name || username}</div>
               <div className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">@{username}</div>
-              {/* Removed bio, using college/location */}
+              
+              {/* Last Active & Invite Status */}
+              <div className="mt-2 flex flex-wrap gap-2 items-center">
+                  {/* Last Active - Calculated on frontend */}
+                  {profile.last_active_at && (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 w-full sm:w-auto">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        {(() => {
+                            const date = new Date(profile.last_active_at);
+                            const now = new Date();
+                            const diff = now.getTime() - date.getTime();
+                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor(diff / (1000 * 60 * 60));
+                            
+                            if (days > 30) return "Inactive for 30+ days";
+                            if (days > 0) return `Active ${days} day${days > 1 ? 's' : ''} ago`;
+                            if (hours > 0) return `Active ${hours} hour${hours > 1 ? 's' : ''} ago`;
+                            return "Active recently";
+                        })()}
+                    </div>
+                  )}
+
+                  {/* Invite Status Badge */}
+                  {profile.team_invite_status && (
+                      <div className={`px-2 py-1 rounded-md text-xs font-semibold border ${
+                          profile.team_invite_status === 'not_in_team_open' 
+                          ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+                          : profile.team_invite_status === 'in_team_open'
+                          ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+                          : 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'
+                      }`}>
+                          {profile.team_invite_status === 'not_in_team_open' ? 'Open to Invites' :
+                           profile.team_invite_status === 'in_team_open' ? 'Open to Invites (In Team)' :
+                           'Not looking for team'}
+                      </div>
+                  )}
+              </div>
+
               <div className="mt-3 flex flex-col gap-1 text-sm text-neutral-600 dark:text-neutral-400">
                   {profile.workplace && <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> {profile.workplace}</div>}
                   {profile.school && <div className="flex items-center gap-2"><School className="w-4 h-4" /> {profile.school}</div>}

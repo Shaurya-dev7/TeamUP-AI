@@ -25,7 +25,8 @@ import {
   Share2,
   Loader2,
   X,
-  AlertCircle
+  AlertCircle,
+  Users
 } from "lucide-react";
 import CollegeAutocomplete, { CollegeSelection } from "@/components/CollegeAutocomplete";
 
@@ -61,7 +62,8 @@ export default function CreateProfilePage() {
     certificates: [] as { title: string, issuer: string, year: string, url: string }[],
     workplace: "",
     school: "",
-    synced_contacts: false // UI toggle state
+    synced_contacts: false, // UI toggle state
+    team_invite_status: "not_in_team_open" // Default
   });
 
   const [currentSkill, setCurrentSkill] = useState("");
@@ -108,7 +110,8 @@ export default function CreateProfilePage() {
             certificates: Array.isArray(profile.certificates) ? profile.certificates : [],
             workplace: profile.workplace || "",
             school: profile.school || "",
-            synced_contacts: Array.isArray(profile.synced_contacts) && profile.synced_contacts.length > 0
+            synced_contacts: Array.isArray(profile.synced_contacts) && profile.synced_contacts.length > 0,
+            team_invite_status: profile.team_invite_status || "not_in_team_open"
           });
           setInitialUsername(profile.username || "");
         }
@@ -400,8 +403,38 @@ export default function CreateProfilePage() {
                             <img src={formData.profile_picture_url} alt="Preview" className="w-12 h-12 rounded-full object-cover border border-neutral-200" />
                         )}
                      </div>
-                     <p className="text-xs text-neutral-400 mt-1">Paste a public URL for your profile picture.</p>
-                </InputGroup>
+
+                 </InputGroup>
+             </div>
+          </Section>
+          
+          {/* New Section: Team Availability */}
+          <Section title="Team Availability" icon={<Users className="w-5 h-5 text-green-600" />}>
+             <div className="space-y-4">
+                 <p className="text-sm text-neutral-500 mb-2">Let others know if you’re open to team invites.</p>
+                 <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
+                     {[
+                         { value: "not_in_team_open", label: "Not in a team – open to invites" },
+                         { value: "in_team_not_open", label: "In a team – not looking for invites" },
+                         { value: "in_team_open", label: "In a team – but open to new invites" }
+                     ].map((option) => (
+                         <label key={option.value} className={`relative flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                             formData.team_invite_status === option.value 
+                             ? "border-green-500 bg-green-50 dark:bg-green-900/20" 
+                             : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
+                         }`}>
+                             <input 
+                                 type="radio" 
+                                 name="team_invite_status"
+                                 value={option.value}
+                                 checked={formData.team_invite_status === option.value}
+                                 onChange={(e) => handleInputChange("team_invite_status", e.target.value)}
+                                 className="w-5 h-5 text-green-600 border-neutral-300 focus:ring-green-500"
+                             />
+                             <span className="ml-3 font-medium text-neutral-900 dark:text-white">{option.label}</span>
+                         </label>
+                     ))}
+                 </div>
              </div>
           </Section>
 
