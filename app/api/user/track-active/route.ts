@@ -1,11 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/database.types';
 
 export async function POST(request: Request) {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
   const { error } = await supabase
     .from('profiles')
     .update({ last_active_at: new Date().toISOString() })
-    .eq('id', session.user.id);
+    .eq('id', user.id);
 
   if (error) {
     console.error('Error updating activity:', error);

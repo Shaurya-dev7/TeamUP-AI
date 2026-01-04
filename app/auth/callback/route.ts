@@ -29,7 +29,24 @@ export async function GET(request: Request) {
     )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      // Get user after successful auth
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Check if profile exists and is complete
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .eq('id', user.id)
+          .single();
+        
+        // If no profile or incomplete username, redirect to profile creation
+        if (!profile || !profile.username) {
+          return NextResponse.redirect(`${origin}/create-profile`);
+        }
+      }
+      
+      return NextResponse.redirect(`${origin}${next}`);
     }
   }
 

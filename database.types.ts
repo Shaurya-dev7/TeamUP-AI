@@ -336,8 +336,17 @@ export type Database = {
           last_active_days: number | null
           profile_completed: boolean | null
           suspended: string | null
+          last_active_at: string | null
           created_at: string
           updated_at: string
+          // OAuth metadata
+          auth_provider: string | null
+          provider_id: string | null
+          google_email: string | null
+          github_username: string | null
+          email: string | null
+          full_name: string | null
+          avatar_url: string | null
         }
         Insert: {
           id: string
@@ -364,8 +373,17 @@ export type Database = {
           last_active_days?: number | null
           profile_completed?: boolean | null
           suspended?: string | null
+          last_active_at?: string | null
           created_at?: string
           updated_at?: string
+          // OAuth metadata
+          auth_provider?: string | null
+          provider_id?: string | null
+          google_email?: string | null
+          github_username?: string | null
+          email?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
         }
         Update: {
           id?: string
@@ -392,8 +410,17 @@ export type Database = {
           last_active_days?: number | null
           profile_completed?: boolean | null
           suspended?: string | null
+          last_active_at?: string | null
           created_at?: string
           updated_at?: string
+          // OAuth metadata
+          auth_provider?: string | null
+          provider_id?: string | null
+          google_email?: string | null
+          github_username?: string | null
+          email?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
         }
         Relationships: []
       }

@@ -156,3 +156,10 @@ body {
     opacity: 1;
   }
 }
+
+/* View Transitions API specific styles */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}

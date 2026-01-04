@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import CinematicSwitch from "@/components/ui/cinematic-glow-toggle";
+import AppSidebar from "@/components/AppSidebar";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 
 function NavLink({ href, label, icon: Icon, badge }: { href: string; label: string; icon: any; badge?: number }) {
@@ -52,6 +53,7 @@ export default function AppHeader() {
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { scrollY } = useScroll();
 
@@ -206,7 +208,7 @@ export default function AppHeader() {
          <div className="absolute inset-0 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-neutral-200/50 dark:border-white/5 supports-[backdrop-filter]:bg-white/60" />
       </div>
 
-      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-6 relative z-10">
 
         {/* LOGO */}
         <div className="flex items-center gap-3">
@@ -239,7 +241,7 @@ export default function AppHeader() {
         </nav>
 
         {/* RIGHT ACTIONS */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 -mr-2">
           {session?.user && !profileUsername && (
             <Link
               href="/create-profile"
@@ -296,12 +298,24 @@ export default function AppHeader() {
               </Link>
             </div>
           )}
-          <div className="pl-2 border-l border-neutral-200 dark:border-neutral-800">
-            <CinematicSwitch />
-          </div>
+          {/* MENU TOGGLE - Visible on all screens for FAQ/Contact access */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsMenuOpen(true); }}
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            <Menu className="w-5 h-5 text-neutral-900 dark:text-white" />
+          </button>
         </div>
       </div>
     </motion.header>
+    
+    <AppSidebar 
+        isOpen={isMenuOpen} 
+        onClose={() => setIsMenuOpen(false)} 
+        session={session} 
+        profileUsername={profileUsername}
+        onLogout={onLogout}
+    />
 
       {/* MOBILE NAV (Bottom Bar) - refined */}
       <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl border border-neutral-200/50 dark:border-white/10 rounded-full px-6 py-3 flex items-center justify-between gap-8 shadow-2xl shadow-black/20 z-[100]">

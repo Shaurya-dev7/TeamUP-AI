@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           <div className="min-h-dvh bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 selection:bg-yellow-400 selection:text-neutral-900 relative">
             <BackgroundEffects />
-            <Toaster position="top-center" richColors />
+            <Toaster position="top-center" richColors closeButton />
             <GlobalNotifications />
             <div className="relative z-10">
               <AppHeader />
