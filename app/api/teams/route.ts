@@ -66,11 +66,23 @@ export async function GET(request: NextRequest) {
       id,
       name,
       goal,
+      description,
       join_mode,
       max_members,
       created_at,
+      created_by,
       team_roles_needed (role_name),
-      team_members (id)
+      team_members (
+        id,
+        user_id,
+        role,
+        profiles:user_id (
+          id,
+          username,
+          name,
+          avatar_url
+        )
+      )
     `;
 
     // If member_only filtering is requested and we have a user
@@ -80,11 +92,23 @@ export async function GET(request: NextRequest) {
         id,
         name,
         goal,
+        description,
         join_mode,
         max_members,
         created_at,
+        created_by,
         team_roles_needed (role_name),
-        team_members!inner (id, user_id)
+        team_members!inner (
+          id,
+          user_id,
+          role,
+          profiles:user_id (
+            id,
+            username,
+            name,
+            avatar_url
+          )
+        )
       `;
     }
 
@@ -144,19 +168,43 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform data to include member count
-    const teamsWithCounts = (teams || []).map((team: any) => ({
-      id: team.id,
-      name: team.name,
-      goal: team.goal,
-      join_mode: team.join_mode,
-      is_private: team.join_mode === 'closed',
-      max_members: team.max_members,
-      member_count: team.team_members?.length || 0,
-      roles_needed: (team.team_roles_needed || []).map((r: any) => r.role_name),
-      created_at: team.created_at,
-      has_pending_request: pendingRequestTeamIds.has(team.id),
-    }));
+    // Transform data to include member count, leader, and member avatars
+    const teamsWithCounts = (teams || []).map((team: any) => {
+      const members = team.team_members || [];
+      
+      // Find leader
+      const leaderMember = members.find((m: any) => m.role === 'leader');
+      const leader = leaderMember?.profiles ? {
+        id: leaderMember.profiles.id,
+        name: leaderMember.profiles.name,
+        username: leaderMember.profiles.username,
+        avatar_url: leaderMember.profiles.avatar_url,
+      } : null;
+      
+      // Get member avatars (up to 5)
+      const memberAvatars = members.slice(0, 5).map((m: any) => ({
+        id: m.profiles?.id || m.user_id,
+        name: m.profiles?.name,
+        username: m.profiles?.username,
+        avatar_url: m.profiles?.avatar_url,
+      }));
+
+      return {
+        id: team.id,
+        name: team.name,
+        goal: team.goal,
+        description: team.description,
+        join_mode: team.join_mode,
+        is_private: team.join_mode === 'closed',
+        max_members: team.max_members,
+        member_count: members.length,
+        roles_needed: (team.team_roles_needed || []).map((r: any) => r.role_name),
+        created_at: team.created_at,
+        has_pending_request: pendingRequestTeamIds.has(team.id),
+        leader,
+        members: memberAvatars,
+      };
+    });
 
     // If no real teams, return demo data (unless member_only, then just return empty)
     if (teamsWithCounts.length === 0) {
