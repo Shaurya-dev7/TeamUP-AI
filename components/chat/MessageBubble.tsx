@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Check, CheckCheck, MoreHorizontal, Reply, Copy, Trash2, MapPin, Pin, PinOff } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export type Message = {
     id: string;
@@ -33,9 +33,12 @@ type MessageBubbleProps = {
 };
 
 export function MessageBubble({ message, isMe, senderName, senderUsername, showName, onReply, onDelete, onPin, onJumpTo, isAdmin }: MessageBubbleProps) {
+    const router = useRouter();
     const [showMenu, setShowMenu] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<'above' | 'below'>('above');
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     
     const time = new Date(message.created_at).toLocaleTimeString([], {
         hour: "2-digit",
@@ -118,21 +121,42 @@ export function MessageBubble({ message, isMe, senderName, senderUsername, showN
         setShowMenu(false);
     };
 
+    // Handle menu open with position calculation
+    const handleMenuOpen = () => {
+        if (buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            // If button is in top 200px of viewport, show menu below
+            if (rect.top < 200) {
+                setMenuPosition('below');
+            } else {
+                setMenuPosition('above');
+            }
+        }
+        setShowMenu(!showMenu);
+    };
+
+    // Navigate to profile
+    const handleProfileClick = () => {
+        if (senderUsername) {
+            router.push(`/profile/${senderUsername}`);
+        }
+    };
+
     // Render sender name - clickable if username available
     const renderSenderName = () => {
         const displayName = isMe ? "You" : senderName;
         
         if (!isMe && senderUsername) {
             return (
-                <Link 
-                    href={`/profile/${senderUsername}`}
+                <button 
+                    onClick={handleProfileClick}
                     className={clsx(
-                        "text-[10px] font-bold ml-3 mb-1 hover:underline cursor-pointer transition-colors",
+                        "text-[10px] font-bold ml-3 mb-1 hover:underline cursor-pointer transition-colors text-left",
                         "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
                     )}
                 >
                     {displayName}
-                </Link>
+                </button>
             );
         }
         
@@ -165,7 +189,7 @@ export function MessageBubble({ message, isMe, senderName, senderUsername, showN
                 {isMe && !isDeleted && (
                     <button 
                         ref={isMe ? buttonRef : undefined}
-                        onClick={() => setShowMenu(!showMenu)}
+                        onClick={handleMenuOpen}
                         className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-opacity"
                     >
                         <MoreHorizontal className="w-4 h-4" />
@@ -273,7 +297,7 @@ export function MessageBubble({ message, isMe, senderName, senderUsername, showN
                 {!isMe && !isDeleted && (
                     <button 
                         ref={!isMe ? buttonRef : undefined}
-                        onClick={() => setShowMenu(!showMenu)}
+                        onClick={handleMenuOpen}
                         className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-opacity"
                     >
                         <MoreHorizontal className="w-4 h-4" />
@@ -289,7 +313,8 @@ export function MessageBubble({ message, isMe, senderName, senderUsername, showN
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             className={clsx(
-                                "absolute z-[100] bottom-full mb-2 bg-white dark:bg-neutral-800 shadow-xl rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col min-w-[140px]",
+                                "absolute z-[100] bg-white dark:bg-neutral-800 shadow-xl rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col min-w-[140px]",
+                                menuPosition === 'above' ? "bottom-full mb-2" : "top-full mt-2",
                                 isMe ? "right-0" : "left-0"
                             )}
                         >
