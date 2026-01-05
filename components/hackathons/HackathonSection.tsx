@@ -10,7 +10,7 @@ import { HackathonEvent } from '@/lib/hackathons';
 import { HackathonCardSkeleton } from '@/components/ui/skeletons';
 
 interface HackathonSectionProps {
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   icon: any;
   category: 'trending' | 'live' | 'upcoming';

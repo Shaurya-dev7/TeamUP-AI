@@ -163,6 +163,7 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [blockedUsernames, setBlockedUsernames] = useState<Set<string>>(new Set());
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false); // background polls
 
   // --- 1. Fetch User Session & Profile Completeness ---
   useEffect(() => {
@@ -191,40 +192,65 @@ export default function DiscoverPage() {
   }, []);
 
   // --- 2. Fetch Data (Profiles, Follows, Hackathons) ---
-  useEffect(() => {
-    const fetchHackathons = async () => {
-        try {
-            // Updated to use Server Actions
+  const fetchHackathons = React.useCallback(async (isBackground = false) => {
+    if (isBackground) {
+        setIsRefreshing(true);
+    } else {
+        setLoading(true);
+    }
 
-            // Search Data
-            const allDocs = await getAllHackathons();
-            setHackathons(allDocs);
+    try {
+        // Parallel fetching for polling efficiency
+        const [allDocs, trending] = await Promise.all([
+            getAllHackathons(),
+            getTrendingHackathons(6)
+        ]);
+        
+        setHackathons(allDocs);
+        setTrendingHackathons(trending);
+        
+        // Note: Live and Upcoming are now on /discover/hackathons
+        setLiveHackathons([]); 
+        setUpcomingHackathons([]);
 
-            // Curated Sections
-            console.log("Fetching trending hackathons...");
-            const trending = await getTrendingHackathons(6); // Trending limit 6
-            console.log("Trending hackathons result:", trending);
-            setTrendingHackathons(trending);
-            
-            // Note: Live and Upcoming are now on /discover/hackathons
-            setLiveHackathons([]); 
-            setUpcomingHackathons([]);
-        } catch (e) {
-            console.error("Hackathon fetch error:", e);
-        } finally {
-            // Ensure loading is set to false after hackathon fetch
+    } catch (e) {
+        console.error("Hackathon fetch error:", e);
+    } finally {
+        if (isBackground) {
+            setIsRefreshing(false);
+        } else {
             setLoading(false);
         }
-    };
-    fetchHackathons();
+    }
+  }, []);
 
+  // Initial Load
+  useEffect(() => {
+    fetchHackathons(false);
+  }, [fetchHackathons]);
+
+  // Polling Mechanism (60s Auto-Update)
+  useEffect(() => {
+    const interval = setInterval(() => {
+        fetchHackathons(true);
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchHackathons]);
+
+
+  // --- Fetch Other Data (Profiles) ---
+  useEffect(() => {
     if (!userId) {
-        setLoading(false); // If no user, we still show hackathons, so stop loading
+        // If we are just browsing as guest, we might still want to see profiles?
+        // But logic below relies on userId for filtering 'neq'
+        // Let's allow guest to see public profiles but simpler query
+        // For now, sticking to original logic: if no userId, stop main profile loading
+        // But fetchHackathons is separate now.
         return;
     }
 
     const fetchData = async () => {
-        setLoading(true);
         if (searchQuery.trim()) {
             // Server-side search for profiles
             let query = supabase
@@ -274,8 +300,6 @@ export default function DiscoverPage() {
                 setFollowedUsernames(new Set((followsData as any[]).map(f => f.following)));
             }
         }
-
-        setLoading(false);
     };
 
     // Debounce
@@ -284,7 +308,7 @@ export default function DiscoverPage() {
     }, searchQuery ? 500 : 0);
 
     return () => clearTimeout(timeout);
-  }, [userId, searchQuery, currentUsername]);
+  }, [userId, searchQuery, currentUsername, supabase]);
 
   // --- 3. Block Logic ---
   useEffect(() => {
@@ -371,8 +395,6 @@ export default function DiscoverPage() {
     }
   };
 
-  // --- 5. Course Click Logic --- (REMOVED)
-
   // --- 6. Filtering Logic ---
   const filteredPeople = realPeople.filter(person => 
     !blockedUsernames.has(person.username.toLowerCase())
@@ -391,6 +413,7 @@ export default function DiscoverPage() {
     h.organizer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.mode?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
 
   const hasResults = filteredPeople.length > 0 || filteredInternships.length > 0 || filteredHackathons.length > 0;
   
@@ -661,7 +684,14 @@ export default function DiscoverPage() {
         <div className="space-y-20">
             {/* 1. Trending (or Search Results) */}
             <HackathonSection 
-                title={searchQuery ? "Search Results" : "🔥 Trending Hackathons"} 
+                title={
+                    searchQuery ? "Search Results" : (
+                        <span className="flex items-center gap-2">
+                            🔥 Trending Hackathons
+                            {isRefreshing && <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />}
+                        </span>
+                    )
+                } 
                 subtitle={searchQuery ? `Found ${filteredHackathons.length} matches` : "The hottest events happening right now."}
                 icon={Trophy}
                 category="trending"

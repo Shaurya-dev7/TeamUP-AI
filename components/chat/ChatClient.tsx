@@ -298,6 +298,20 @@ export default function ChatClient() {
     };
 
     const handleDeleteMessage = async (msgId: string) => {
+        const msgToDelete = messages.find(m => m.id === msgId);
+        if (!msgToDelete) return;
+
+        // Check permission: Owner or Group Admin
+        const isActiveAdmin = (activeConv?.type === 'group' && 
+            // @ts-ignore
+            activeConv.participants?.find((p: any) => p.user_id === sessionUserId)?.role === 'admin'
+        );
+
+        if (msgToDelete.sender_id !== sessionUserId && !isActiveAdmin) {
+            alert("You can only delete your own messages.");
+            return;
+        }
+
         if (!confirm("Are you sure you want to delete this message?")) return;
         
         // Optimistic update
@@ -1419,7 +1433,11 @@ export default function ChatClient() {
                 onDelete={handleDeleteMessage}
                 onPin={handlePinMessage}
                 onJumpTo={handleJumpTo}
-                isAdmin={true}
+                isAdmin={
+                    activeConv.type === 'group' && 
+                    // @ts-ignore
+                    activeConv.participants?.find((p: any) => p.user_id === sessionUserId)?.role === 'admin'
+                }
             />
         </div>
     );
