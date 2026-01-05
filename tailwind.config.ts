@@ -13,6 +13,11 @@ const config: Config = {
         sans: ["var(--font-jakarta)", "sans-serif"],
         heading: ["var(--font-outfit)", "sans-serif"],
       },
+      keyframes: {
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
+      },
     },
   },
   plugins: [],

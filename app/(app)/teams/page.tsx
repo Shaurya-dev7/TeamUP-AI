@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TeamCardSkeleton } from "@/components/ui/skeletons";
 import TeamCard from "@/components/teams/TeamCard";
 import { checkProfileCompleteness } from "@/lib/profile/completeness";
 
@@ -313,7 +313,7 @@ export default function TeamsPage() {
              {loading ? (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Skeleton key={i} className="h-[280px] rounded-3xl" />
+                    <TeamCardSkeleton key={i} />
                   ))}
                 </div>
              ) : (activeTab === 'my-teams' ? myTeams : filteredTeams).length > 0 ? (

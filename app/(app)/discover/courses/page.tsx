@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getNewCourses, getTrendingCourses, getAllCourses, trackCourseClick } from "./actions";
+import { CourseCardSkeleton } from "@/components/ui/skeletons";
 
 // --- Animation Variants ---
 const containerVariants = {
@@ -136,8 +137,10 @@ export default function DiscoverCoursesPage() {
 
         {/* --- MAIN CONTENT --- */}
         {isLoading ? (
-            <div className="flex justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <CourseCardSkeleton key={i} />
+                ))}
             </div>
         ) : isFiltering ? (
             <div className="space-y-6">

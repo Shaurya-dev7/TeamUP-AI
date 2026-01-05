@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import HackathonCard from './HackathonCard';
 import { HackathonEvent } from '@/lib/hackathons';
+import { HackathonCardSkeleton } from '@/components/ui/skeletons';
 
 interface HackathonSectionProps {
   title: string;
@@ -74,9 +75,8 @@ export default function HackathonSection({
         className="grid gap-6 md:grid-cols-3 xl:grid-cols-4" // Use 4 cols for wide screens
       >
           {loading ? (
-             // Skeletons
              [1,2,3,4].map(i => (
-                 <div key={i} className="h-[400px] w-full bg-neutral-100 dark:bg-neutral-800 rounded-3xl animate-pulse" />
+                 <HackathonCardSkeleton key={i} />
              ))
           ) : (
             hackathons.map((hackathon) => (

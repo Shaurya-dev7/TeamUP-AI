@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import HackathonCard from './HackathonCard';
 import { HackathonEvent } from '@/lib/hackathons';
 import { Loader2 } from 'lucide-react';
+import { HackathonCardSkeleton } from '@/components/ui/skeletons';
 
 interface HackathonListProps {
   hackathons: HackathonEvent[];
@@ -59,9 +60,8 @@ export default function HackathonList({
         ))}
         
         {loading && (
-          // Skeletons appended
           [1,2,3,4].map(i => (
-             <div key={`skeleton-${i}`} className="h-[400px] w-full bg-neutral-100 dark:bg-neutral-800 rounded-3xl animate-pulse" />
+             <HackathonCardSkeleton key={`skeleton-${i}`} />
           ))
         )}
       </motion.div>

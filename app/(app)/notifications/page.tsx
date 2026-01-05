@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, Check, X, Users, Bell, UserPlus, MessageCircle, Eye, Sparkles } from "lucide-react";
+import { NotificationSkeleton } from "@/components/ui/skeletons";
 
 // Status constants to prevent typos
 const STATUS = {
@@ -387,9 +388,10 @@ export default function NotificationsPage() {
       {/* List */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
-            <p className="text-neutral-500">Loading notifications...</p>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <NotificationSkeleton key={i} />
+            ))}
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-20 bg-neutral-50 dark:bg-neutral-900/50 rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-800">
