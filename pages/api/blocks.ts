@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@supabase/supabase-js';
 import { logNegativeFeedback, NEGATIVE_FEEDBACK_TYPES } from '@/lib/events/logger';
+import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from '@/lib/profile/completeness';
 
 /**
  * Block/Unblock API
@@ -39,15 +40,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  // Get current user's username
+  // Get current user's full profile for completeness check
   const { data: currentProfile } = await supabase
     .from('profiles')
-    .select('username')
+    .select('*')
     .eq('id', user.id)
-    .single();
+    .single() as { data: any };
 
   if (!currentProfile?.username) {
     return res.status(400).json({ error: 'Profile not found' });
+  }
+
+  // Check profile completeness before allowing block/unblock
+  const completeness = checkProfileCompleteness(currentProfile, { minimal: true });
+  if (!completeness.isComplete) {
+    return res.status(403).json({ 
+      error: INCOMPLETE_PROFILE_ERROR,
+      missing: completeness.missing,
+      profile_incomplete: true
+    });
   }
 
   const blockerUsername = currentProfile.username;

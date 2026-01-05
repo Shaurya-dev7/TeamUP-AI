@@ -152,14 +152,10 @@ export default function ProfilePage() {
           const meProfile = me as any; // Cast to any to avoid 'never' issue if inference fails
           if (mounted && meProfile) {
             setCurrentUsername(meProfile.username);
-            // Check profile completeness for current user
-            const hasName = meProfile.name && meProfile.name.trim() !== '';
-            const hasPfp = meProfile.avatar_url || meProfile.pfp || meProfile.profile_picture;
-            const hasSkillsOrInterests = (meProfile.skills && meProfile.skills.trim() !== '') || 
-                                          (meProfile.interests && meProfile.interests.trim() !== '');
-            const hasCollegeOrWorkplace = (meProfile.college && meProfile.college.trim() !== '') ||
-                                           (meProfile.workplace && meProfile.workplace.trim() !== '');
-            setIsMyProfileComplete(hasName && hasPfp && hasSkillsOrInterests && hasCollegeOrWorkplace);
+            // Check profile completeness using minimal check (name, age, gender, username)
+            const { checkProfileCompleteness } = await import('@/lib/profile/completeness');
+            const completeness = checkProfileCompleteness(meProfile, { minimal: true });
+            setIsMyProfileComplete(completeness.isComplete);
           }
       }
 

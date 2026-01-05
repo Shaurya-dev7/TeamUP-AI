@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from "@/lib/profile/completeness";
 
 type RouteParams = { params: Promise<{ teamId: string }> };
 
@@ -113,6 +114,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     
     if (authError || !user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Check profile completeness (name, age, gender, username required)
+    const { data: userProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (!userProfile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+    }
+
+    const completeness = checkProfileCompleteness(userProfile, { minimal: true });
+    if (!completeness.isComplete) {
+      return NextResponse.json({ 
+        error: INCOMPLETE_PROFILE_ERROR,
+        missing: completeness.missing,
+        profile_incomplete: true
+      }, { status: 403 });
     }
 
     const body = await request.json();
