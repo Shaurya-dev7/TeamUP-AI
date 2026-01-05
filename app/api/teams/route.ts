@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           id,
           username,
           name,
-          avatar_url
+          profile_picture_url
         )
       )
     `;
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
             id,
             username,
             name,
-            avatar_url
+            profile_picture_url
           )
         )
       `;
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
         id: leaderMember.profiles.id,
         name: leaderMember.profiles.name,
         username: leaderMember.profiles.username,
-        avatar_url: leaderMember.profiles.avatar_url,
+        avatar_url: leaderMember.profiles.profile_picture_url,
       } : null;
       
       // Get member avatars (up to 5)
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
         id: m.profiles?.id || m.user_id,
         name: m.profiles?.name,
         username: m.profiles?.username,
-        avatar_url: m.profiles?.avatar_url,
+        avatar_url: m.profiles?.profile_picture_url,
       }));
 
       return {
@@ -291,6 +291,7 @@ export async function POST(request: NextRequest) {
         goal: goal || null,
         max_members: max_members || 10,
         join_mode: join_mode || 'request', // Default to request
+        status: 'active', // Explicitly set status so team is visible
         conversation_id: conversation.id,
         created_by: user.id,
       })

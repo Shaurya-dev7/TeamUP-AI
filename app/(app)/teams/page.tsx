@@ -88,10 +88,10 @@ export default function TeamsPage() {
           // Get token for API calls
           token = data.session?.access_token;
           
-          // My Teams (only for logged-in users)
+          // My Teams (only for logged-in users) - use dedicated endpoint
           if (token) {
             try {
-              const res = await fetch("/api/teams?member_only=true", {
+              const res = await fetch("/api/teams/mine", {
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (res.ok) {

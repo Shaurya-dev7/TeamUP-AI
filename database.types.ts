@@ -896,7 +896,7 @@ export type Database = {
         }
         Relationships: []
       }
-      voice_input_settings: {
+      voice_note_settings: {
         Row: {
           id: string
           enabled: boolean

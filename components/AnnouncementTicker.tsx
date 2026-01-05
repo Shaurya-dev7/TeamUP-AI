@@ -22,7 +22,7 @@ export default function AnnouncementTicker() {
             <Link key={i} href="/discover" className="flex items-center gap-4 group">
               <span className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Live: Global AI Hackathon 2024
+                Live: Global AI Hackathon 2026
               </span>
               <span className="text-xs font-medium text-white/80 group-hover:text-white group-hover:underline flex items-center gap-1 transition-all">
                 Register Now <ArrowRight className="w-3 h-3" />
@@ -45,7 +45,7 @@ export default function AnnouncementTicker() {
             <Link key={i} href="/discover" className="flex items-center gap-4 group">
               <span className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Live: Global AI Hackathon 2024
+                Live: Global AI Hackathon 2026
               </span>
               <span className="text-xs font-medium text-white/80 group-hover:text-white group-hover:underline flex items-center gap-1 transition-all">
                 Register Now <ArrowRight className="w-3 h-3" />

@@ -49,19 +49,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const userId = user.id;
 
-    // Check if voice input is enabled
+    // Check if voice input is enabled - default to true for dev if table doesn't exist
     // @ts-ignore
-    const { data: settings } = await (supabase as any)
-      .from('voice_input_settings')
+    const { data: settings, error: settingsError } = await (supabase as any)
+      .from('voice_note_settings')
       .select('enabled, cooldown_seconds, max_requests_per_minute')
       .single();
 
-    if (!settings?.enabled) {
+    // Default to enabled if settings not found or error
+    const isEnabled = settingsError ? true : (settings?.enabled ?? true);
+    
+    if (!isEnabled) {
       return res.status(403).json({ error: 'Voice input is disabled' });
     }
 
-    const cooldownSeconds = settings.cooldown_seconds || 30;
-    const maxRequestsPerMinute = settings.max_requests_per_minute || 10;
+    const cooldownSeconds = settings?.cooldown_seconds || 30;
+    const maxRequestsPerMinute = settings?.max_requests_per_minute || 10;
 
     // Check cooldown
     const lastRequest = userCooldowns.get(userId);
@@ -127,32 +130,60 @@ async function transcribeAudio(audioBase64: string): Promise<string> {
   // If no API key, return mock response for development
   if (!openaiApiKey) {
     console.log('OPENAI_API_KEY not set - returning mock transcription');
-    return '[Voice input - configure OPENAI_API_KEY for real transcription]';
+    return 'This is a mock transcription. Add OPENAI_API_KEY to .env.local for real voice-to-text.';
   }
 
   try {
-    // Convert base64 to blob
+    // Convert base64 to buffer
     const audioBuffer = Buffer.from(audioBase64, 'base64');
     
-    // Create form data for Whisper API
-    const formData = new FormData();
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
-    formData.append('file', audioBlob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'en'); // Can be made configurable
+    // Create multipart boundary
+    const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+    
+    // Build multipart form data manually for Node.js
+    const parts: Buffer[] = [];
+    
+    // Add file part
+    parts.push(Buffer.from(
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="audio.webm"\r\n` +
+      `Content-Type: audio/webm\r\n\r\n`
+    ));
+    parts.push(audioBuffer);
+    parts.push(Buffer.from('\r\n'));
+    
+    // Add model part
+    parts.push(Buffer.from(
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="model"\r\n\r\n` +
+      `whisper-1\r\n`
+    ));
+    
+    // Add language part (optional)
+    parts.push(Buffer.from(
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="language"\r\n\r\n` +
+      `en\r\n`
+    ));
+    
+    // Close boundary
+    parts.push(Buffer.from(`--${boundary}--\r\n`));
+    
+    const body = Buffer.concat(parts);
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
-      body: formData,
+      body: body,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Whisper API error:', errorText);
-      throw new Error('Whisper API request failed');
+      console.error('Whisper API error:', response.status, errorText);
+      throw new Error(`Whisper API request failed: ${response.status}`);
     }
 
     const result = await response.json();
@@ -162,3 +193,4 @@ async function transcribeAudio(audioBase64: string): Promise<string> {
     throw error;
   }
 }
+

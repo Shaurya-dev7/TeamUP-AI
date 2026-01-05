@@ -604,6 +604,7 @@ export default function CreateProfilePage() {
                 <InputGroup label="Hackathons Participated">
                      <input 
                         type="number"
+                        min="0"
                         className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-transparent focus:border-green-500 focus:bg-white dark:focus:bg-black transition-all outline-none font-medium"
                         placeholder="0"
                         value={formData.hackathons_participated}
@@ -613,6 +614,7 @@ export default function CreateProfilePage() {
                 <InputGroup label="Projects Completed">
                      <input 
                         type="number"
+                        min="0"
                         className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-transparent focus:border-green-500 focus:bg-white dark:focus:bg-black transition-all outline-none font-medium"
                         placeholder="0"
                         value={formData.projects_completed}

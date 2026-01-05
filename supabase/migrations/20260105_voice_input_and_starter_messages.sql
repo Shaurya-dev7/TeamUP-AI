@@ -21,19 +21,44 @@ INSERT INTO public.chat_starter_templates (context, content) VALUES
 ('new_member_joined', '👋 A new member has joined! Say hello and help them get started.')
 ON CONFLICT DO NOTHING;
 
--- 2. Voice Input Settings (feature flag)
-CREATE TABLE IF NOT EXISTS public.voice_input_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    enabled BOOLEAN DEFAULT true,
-    cooldown_seconds INTEGER DEFAULT 30,
-    max_requests_per_minute INTEGER DEFAULT 10,
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
+-- 2. Voice Note Settings (feature flag) - add columns if table exists
+DO $$
+BEGIN
+    -- Add enabled column if not exists
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'voice_note_settings' 
+        AND column_name = 'enabled'
+    ) THEN
+        ALTER TABLE public.voice_note_settings ADD COLUMN enabled BOOLEAN DEFAULT true;
+    END IF;
+    
+    -- Add cooldown_seconds column if not exists
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'voice_note_settings' 
+        AND column_name = 'cooldown_seconds'
+    ) THEN
+        ALTER TABLE public.voice_note_settings ADD COLUMN cooldown_seconds INTEGER DEFAULT 30;
+    END IF;
+    
+    -- Add max_requests_per_minute column if not exists
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'voice_note_settings' 
+        AND column_name = 'max_requests_per_minute'
+    ) THEN
+        ALTER TABLE public.voice_note_settings ADD COLUMN max_requests_per_minute INTEGER DEFAULT 10;
+    END IF;
+END $$;
 
--- Seed default settings (only if empty)
-INSERT INTO public.voice_input_settings (enabled, cooldown_seconds, max_requests_per_minute)
+-- Ensure at least one row exists with defaults
+INSERT INTO public.voice_note_settings (enabled, cooldown_seconds, max_requests_per_minute)
 SELECT true, 30, 10
-WHERE NOT EXISTS (SELECT 1 FROM public.voice_input_settings);
+WHERE NOT EXISTS (SELECT 1 FROM public.voice_note_settings);
 
 -- 3. Extend messages table with input_method
 DO $$
@@ -55,18 +80,12 @@ END $$;
 
 -- 4. RLS Policies for new tables (public read for settings, restricted for templates)
 ALTER TABLE public.chat_starter_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.voice_input_settings ENABLE ROW LEVEL SECURITY;
 
 -- Anyone authenticated can read templates
+DROP POLICY IF EXISTS "Authenticated users can read starter templates" ON public.chat_starter_templates;
 CREATE POLICY "Authenticated users can read starter templates"
 ON public.chat_starter_templates FOR SELECT
 TO authenticated
 USING (is_active = true);
-
--- Anyone authenticated can read settings
-CREATE POLICY "Authenticated users can read voice input settings"
-ON public.voice_input_settings FOR SELECT
-TO authenticated
-USING (true);
 
 COMMIT;

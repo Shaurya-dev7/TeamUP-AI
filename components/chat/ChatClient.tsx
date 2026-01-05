@@ -373,7 +373,7 @@ export default function ChatClient() {
     const [isSending, setIsSending] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
 
-    const handleSendMessage = async (val: string, type: 'text'|'location' = 'text') => { 
+    const handleSendMessage = async (val: string, type: 'text'|'location' = 'text', inputMethod: 'keyboard' | 'voice' = 'keyboard') => { 
         if (!selectedConvId || !sessionUserId || (!val.trim() && type === 'text')) return;
         
         // Profile Completeness Check (Minimal: Name required)
@@ -405,7 +405,8 @@ export default function ChatClient() {
                 conversation_id: selectedConvId,
                 sender_id: sessionUserId,
                 content: finalContent,
-                message_type: type
+                message_type: type,
+                input_method: inputMethod
             });
             
             if (error) throw error;
@@ -1258,7 +1259,7 @@ export default function ChatClient() {
                             <ChatInput 
                                 value={input} 
                                 onChange={handleInputChange} 
-                                onSend={() => handleSendMessage(input)} 
+                                onSend={(inputMethod) => handleSendMessage(input, 'text', inputMethod || 'keyboard')} 
                                 disabled={false} 
                                 replyingTo={replyingTo ? {
                                     // @ts-ignore
@@ -1267,10 +1268,6 @@ export default function ChatClient() {
                                 } : null}
                                 onCancelReply={handleCancelReply}
                                 onLocation={handleLocation}
-                                voiceEnabled={voiceInputEnabled}
-                                cooldownSeconds={voiceCooldownSeconds}
-                                lastVoiceInputTime={lastVoiceInputTime}
-                                onVoiceTranscribed={() => setLastVoiceInputTime(Date.now())}
                             />
                         </div>
                     </>

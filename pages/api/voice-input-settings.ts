@@ -15,15 +15,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // @ts-ignore
     const { data: settings, error } = await (supabase as any)
-      .from('voice_input_settings')
+      .from('voice_note_settings')
       .select('enabled, cooldown_seconds, max_requests_per_minute')
       .single();
 
     if (error) {
       console.error('Error fetching voice input settings:', error);
-      // Return defaults if table doesn't exist yet
+      // Return defaults if table doesn't exist yet - enable by default for dev
       return res.status(200).json({
-        enabled: false,
+        enabled: true,
         cooldown_seconds: 30,
         max_requests_per_minute: 10
       });
