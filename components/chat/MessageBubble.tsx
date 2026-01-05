@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Check, CheckCheck, MoreHorizontal, Reply, Copy, Trash2, MapPin, Pin, PinOff } from "lucide-react";
+import Link from "next/link";
 
 export type Message = {
     id: string;
@@ -22,6 +23,7 @@ type MessageBubbleProps = {
     message: Message;
     isMe: boolean;
     senderName?: string;
+    senderUsername?: string;
     showName?: boolean;
     onReply?: (msg: Message) => void;
     onDelete?: (msgId: string) => void;
@@ -30,8 +32,11 @@ type MessageBubbleProps = {
     isAdmin?: boolean;
 };
 
-export function MessageBubble({ message, isMe, senderName, showName, onReply, onDelete, onPin, onJumpTo, isAdmin }: MessageBubbleProps) {
+export function MessageBubble({ message, isMe, senderName, senderUsername, showName, onReply, onDelete, onPin, onJumpTo, isAdmin }: MessageBubbleProps) {
     const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    
     const time = new Date(message.created_at).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -40,6 +45,32 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
     const isDeleted = message.content === "🚫 This message was deleted";
     const isLocation = message.message_type === 'location';
     const isSystemMessage = !message.sender_id; // System messages have no sender
+
+    // Click outside handler to close menu
+    useEffect(() => {
+        if (!showMenu) return;
+        
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                menuRef.current && 
+                !menuRef.current.contains(event.target as Node) &&
+                buttonRef.current &&
+                !buttonRef.current.contains(event.target as Node)
+            ) {
+                setShowMenu(false);
+            }
+        };
+
+        // Add listener with a small delay to prevent immediate close
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 10);
+
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showMenu]);
 
     // System Message (Starter messages, welcomes, etc.)
     if (isSystemMessage) {
@@ -87,6 +118,34 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
         setShowMenu(false);
     };
 
+    // Render sender name - clickable if username available
+    const renderSenderName = () => {
+        const displayName = isMe ? "You" : senderName;
+        
+        if (!isMe && senderUsername) {
+            return (
+                <Link 
+                    href={`/profile/${senderUsername}`}
+                    className={clsx(
+                        "text-[10px] font-bold ml-3 mb-1 hover:underline cursor-pointer transition-colors",
+                        "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                    )}
+                >
+                    {displayName}
+                </Link>
+            );
+        }
+        
+        return (
+            <span className={clsx(
+                "text-[10px] font-bold ml-3 mb-1",
+                isMe ? "text-neutral-900/50 dark:text-white/50 self-end mr-3" : "text-neutral-500"
+            )}>
+                {displayName}
+            </span>
+        );
+    };
+
     return (
         <motion.div
             layout
@@ -96,23 +155,16 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
                 "group flex flex-col w-full mb-1 relative", // tighter spacing
                 isMe ? "items-end" : "items-start"
             )}
-            onMouseLeave={() => setShowMenu(false)}
         >
             {/* Sender Name for Group Chats */}
-            {showName && (
-                <span className={clsx(
-                    "text-[10px] font-bold ml-3 mb-1",
-                    isMe ? "text-neutral-900/50 dark:text-white/50 self-end mr-3" : "text-neutral-500"
-                )}>
-                    {isMe ? "You" : senderName}
-                </span>
-            )}
+            {showName && renderSenderName()}
 
             <div className="relative max-w-[85%] sm:max-w-[70%] flex items-end gap-2 group">
                 
                 {/* Menu Button (Left for Me, Right for Others) */}
                 {isMe && !isDeleted && (
                     <button 
+                        ref={isMe ? buttonRef : undefined}
                         onClick={() => setShowMenu(!showMenu)}
                         className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-opacity"
                     >
@@ -220,6 +272,7 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
                 {/* Menu Button (Right for Others) */}
                 {!isMe && !isDeleted && (
                     <button 
+                        ref={!isMe ? buttonRef : undefined}
                         onClick={() => setShowMenu(!showMenu)}
                         className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-opacity"
                     >
@@ -231,11 +284,12 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
                 <AnimatePresence>
                     {showMenu && !isDeleted && (
                         <motion.div 
+                            ref={menuRef}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             className={clsx(
-                                "absolute z-50 bottom-full mb-2 bg-white dark:bg-neutral-800 shadow-xl rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col min-w-[140px]",
+                                "absolute z-[100] bottom-full mb-2 bg-white dark:bg-neutral-800 shadow-xl rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col min-w-[140px]",
                                 isMe ? "right-0" : "left-0"
                             )}
                         >
@@ -264,3 +318,4 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
         </motion.div>
     );
 }
+

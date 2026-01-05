@@ -126,12 +126,18 @@ export async function GET(request: NextRequest) {
       // Normal browsing filters
       // Search by name or team ID
       if (search) {
+        // Check if search might be an ID
         const searchNum = parseInt(search);
-        if (!isNaN(searchNum)) {
-          // Search by exact team ID
-          query = query.eq("id", searchNum);
+        
+        // If it's a valid number and actually looks like a number (not "123 abc")
+        const isNumeric = !isNaN(searchNum) && String(searchNum) === search;
+
+        if (isNumeric) {
+          // Search by exact team ID OR name contains search string
+          // distinct id types can be tricky in OR, but Supabase handles basic comparisons
+          query = query.or(`id.eq.${searchNum},name.ilike.%${search}%`);
         } else {
-          // Search by name (case insensitive)
+          // Search by name only (case insensitive)
           query = query.ilike("name", `%${search}%`);
         }
       } else {

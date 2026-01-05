@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ChatBackground } from "@/components/chat/ChatBackground";
@@ -32,6 +32,7 @@ const ChatNotification = ({ message, onClose }: { message: { sender: string, tex
 
 export default function ChatClient() {
     const supabase = useMemo(() => createClient(), []);
+    const router = useRouter();
     const searchParams = useSearchParams();
     const initialUserId = searchParams ? searchParams.get("userId") : null;
 
@@ -966,8 +967,14 @@ export default function ChatClient() {
                         {/* Chat Header */}
                         <div className="h-20 border-b border-neutral-200/50 dark:border-neutral-800/50 flex items-center px-6 bg-white/60 dark:bg-black/60 backdrop-blur-xl z-20 justify-between">
                              <div 
-                                className={`ml-12 md:ml-0 flex items-center gap-4 ${activeConv.type === 'group' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                                onClick={() => activeConv.type === 'group' && setIsGroupInfoOpen(true)}
+                                className="ml-12 md:ml-0 flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {
+                                    if (activeConv.type === 'group') {
+                                        setIsGroupInfoOpen(true);
+                                    } else if (activeConv.other_user?.username) {
+                                        router.push(`/profile/${activeConv.other_user.username}`);
+                                    }
+                                }}
                              >
                                 <div className="relative">
                                     <div className="w-11 h-11 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center font-bold text-neutral-500 overflow-hidden ring-2 ring-white dark:ring-neutral-800 shadow-sm">
@@ -1196,7 +1203,9 @@ export default function ChatClient() {
                                 // @ts-ignore
                                 const senderParticipant = activeConv.participants?.find((p: any) => p.user_id === m.sender_id);
                                 // @ts-ignore
-                                const senderName = senderParticipant?.user?.username || m.sender?.username || "Unknown";
+                                const senderName = senderParticipant?.user?.name || senderParticipant?.user?.username || m.sender?.username || "Unknown";
+                                // @ts-ignore
+                                const senderUsername = senderParticipant?.user?.username || m.sender?.username;
                                 
     const handleJumpTo = (msgId: string) => {
         const el = document.getElementById(`msg-${msgId}`);
@@ -1218,6 +1227,7 @@ export default function ChatClient() {
                 message={m} 
                 isMe={m.is_me || false} 
                 senderName={senderName}
+                senderUsername={senderUsername}
                 showName={activeConv.type === 'group'} 
                 onReply={handleReply}
                 onDelete={handleDeleteMessage}

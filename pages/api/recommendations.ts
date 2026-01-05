@@ -189,7 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         college: u.profile.college,
         workplace: u.profile.workplace,
         location: u.profile.location, // Required for UI
-        avatar_url: u.profile.avatar_url, // Required for UI
+        avatar_url: u.profile.profile_picture_url, // Required for UI
         skills: u.profile.skills,
         interests: u.profile.interests,
         matchPercentage: u.matchPercentage,

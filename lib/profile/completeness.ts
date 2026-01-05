@@ -34,8 +34,8 @@ export function checkProfileCompleteness(profile: any, options: { minimal?: bool
     };
   }
 
-  // Check profile picture (could be avatar_url, pfp, or profile_picture)
-  const hasPfp = profile?.avatar_url || profile?.pfp || profile?.profile_picture;
+  // Check profile picture (could be avatar_url, pfp, profile_picture, or profile_picture_url)
+  const hasPfp = profile?.avatar_url || profile?.pfp || profile?.profile_picture || profile?.profile_picture_url;
   if (!hasPfp) {
     missing.push('profile_picture');
   }
