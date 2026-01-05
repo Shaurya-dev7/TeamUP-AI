@@ -105,9 +105,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to add participants', details: membersError?.message });
     }
 
-    // Initial Message (System or Empty?) - WhatsApp doesn't really have "Chat started", but we'll add a system msg or just leave empty.
-    // Let's NOT add a visible message so the chat is empty. 
-    // BUT we need an `updated_at` trigger or something. The trigger handles it.
+    // Insert starter message (system-authored, sender_id = null)
+    try {
+      // @ts-ignore
+      const { data: template } = await (supabase as any)
+        .from('chat_starter_templates')
+        .select('content')
+        .eq('context', 'new_direct_chat')
+        .eq('is_active', true)
+        .single();
+
+      if (template?.content) {
+        // @ts-ignore
+        await (supabase as any).from('messages').insert({
+          conversation_id: (conv as any).id,
+          sender_id: null, // System message - no sender
+          content: template.content,
+          message_type: 'text',
+          input_method: 'keyboard'
+        });
+      }
+    } catch (starterErr) {
+      // Non-fatal: log but don't fail chat creation
+      console.log('Starter message insert skipped:', starterErr);
+    }
     
     return res.status(200).json({ chat: conv });
   } catch (err) {

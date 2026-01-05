@@ -57,6 +57,11 @@ export default function ChatClient() {
     const [showChatBlockMenu, setShowChatBlockMenu] = useState(false);
     const [currentUserUsername, setCurrentUserUsername] = useState<string | null>(null);
 
+    // Voice Input Settings
+    const [voiceInputEnabled, setVoiceInputEnabled] = useState(false);
+    const [voiceCooldownSeconds, setVoiceCooldownSeconds] = useState(30);
+    const [lastVoiceInputTime, setLastVoiceInputTime] = useState(0);
+
     // Auto-scroll to bottom
     useEffect(() => {
         if (messagesEndRef.current && messages.length > 0) {
@@ -75,6 +80,23 @@ export default function ChatClient() {
         };
         fetchSession();
     }, [supabase]);
+
+    // Fetch Voice Input Settings
+    useEffect(() => {
+        const fetchVoiceSettings = async () => {
+            try {
+                const res = await fetch('/api/voice-input-settings');
+                if (res.ok) {
+                    const settings = await res.json();
+                    setVoiceInputEnabled(settings.enabled || false);
+                    setVoiceCooldownSeconds(settings.cooldown_seconds || 30);
+                }
+            } catch (e) {
+                console.log('Voice settings fetch failed:', e);
+            }
+        };
+        fetchVoiceSettings();
+    }, []);
 
     // 2. Fetch Conversations (Robust)
     const fetchConversations = useCallback(async () => {
@@ -1245,6 +1267,10 @@ export default function ChatClient() {
                                 } : null}
                                 onCancelReply={handleCancelReply}
                                 onLocation={handleLocation}
+                                voiceEnabled={voiceInputEnabled}
+                                cooldownSeconds={voiceCooldownSeconds}
+                                lastVoiceInputTime={lastVoiceInputTime}
+                                onVoiceTranscribed={() => setLastVoiceInputTime(Date.now())}
                             />
                         </div>
                     </>

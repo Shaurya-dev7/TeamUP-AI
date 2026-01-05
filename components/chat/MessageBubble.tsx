@@ -39,6 +39,25 @@ export function MessageBubble({ message, isMe, senderName, showName, onReply, on
 
     const isDeleted = message.content === "🚫 This message was deleted";
     const isLocation = message.message_type === 'location';
+    const isSystemMessage = !message.sender_id; // System messages have no sender
+
+    // System Message (Starter messages, welcomes, etc.)
+    if (isSystemMessage) {
+        return (
+            <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="flex justify-center w-full my-4"
+            >
+                <div className="max-w-[80%] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-sm border border-blue-100 dark:border-blue-800/30 rounded-2xl px-5 py-3 text-center shadow-sm">
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                        {message.content}
+                    </span>
+                </div>
+            </motion.div>
+        );
+    }
 
     // Parse Reply Quote
     // Format: > [reply:ID] Quote... OR > Quote...

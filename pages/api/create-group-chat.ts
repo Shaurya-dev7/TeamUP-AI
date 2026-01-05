@@ -69,18 +69,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to add group members', details: membersError?.message });
     }
 
-    // Initial system message
-    // @ts-ignore
-    const { error: msgError } = await (supabase as any).from('messages').insert({
-      conversation_id: (chat as any).id,
-      sender_id: userId,
-      content: `created group "${name}"`,
-      message_type: 'text'
-    } as any);
+    // Insert starter message (system-authored, sender_id = null)
+    try {
+      // @ts-ignore
+      const { data: template } = await (supabase as any)
+        .from('chat_starter_templates')
+        .select('content')
+        .eq('context', 'new_group_chat')
+        .eq('is_active', true)
+        .single();
 
-    if (msgError) {
-        // Log but don't fail
-      console.error('Error inserting initial group message:', msgError);
+      if (template?.content) {
+        // @ts-ignore
+        await (supabase as any).from('messages').insert({
+          conversation_id: (chat as any).id,
+          sender_id: null, // System message - no sender
+          content: template.content,
+          message_type: 'text',
+          input_method: 'keyboard'
+        });
+      }
+    } catch (starterErr) {
+      // Non-fatal: log but don't fail
+      console.log('Starter message insert skipped:', starterErr);
     }
 
     return res.status(200).json({ chat });

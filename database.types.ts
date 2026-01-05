@@ -872,6 +872,54 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_starter_templates: {
+        Row: {
+          id: string
+          context: string
+          content: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          context: string
+          content: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          context?: string
+          content?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      voice_input_settings: {
+        Row: {
+          id: string
+          enabled: boolean
+          cooldown_seconds: number
+          max_requests_per_minute: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          enabled?: boolean
+          cooldown_seconds?: number
+          max_requests_per_minute?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          enabled?: boolean
+          cooldown_seconds?: number
+          max_requests_per_minute?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
