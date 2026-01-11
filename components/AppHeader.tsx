@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import CinematicSwitch from "@/components/ui/cinematic-glow-toggle";
+import { BrandLogo } from "@/components/BrandLogo";
 import AppSidebar from "@/components/AppSidebar";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 
@@ -213,9 +214,9 @@ export default function AppHeader() {
         {/* LOGO */}
         <div className="flex items-center gap-3">
           <Link href="/" className="group flex items-center gap-3 select-none">
-            <div className="relative grid size-10 place-items-center rounded-xl bg-neutral-950 text-sm font-black text-yellow-500 shadow-xl shadow-neutral-900/10 transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 group-hover:bg-yellow-500 group-hover:text-black dark:bg-white dark:text-neutral-950 dark:shadow-white/5 dark:group-hover:bg-yellow-400">
-               <span className="relative z-10">TUP</span>
-            </div>
+             <div className="relative size-10 rounded-full overflow-hidden shadow-xl shadow-neutral-900/10 transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 dark:shadow-white/5 bg-neutral-950 dark:bg-white">
+                <BrandLogo className="w-full h-full" />
+             </div>
             <div className={`leading-tight flex flex-col`}>
               <div className="text-sm font-bold tracking-tight text-neutral-900 group-hover:text-yellow-600 transition-colors dark:text-white dark:group-hover:text-yellow-400">
                 TeamUp

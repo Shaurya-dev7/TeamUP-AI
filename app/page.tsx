@@ -6,6 +6,8 @@ import { motion, useScroll, useTransform, useSpring, useMotionTemplate, useMotio
 import { ArrowRight, CheckCircle2, MessageSquare, Search, Zap, Check, Sparkles, Globe, Shield } from "lucide-react";
 import AppFooter from "@/components/AppFooter";
 import AnnouncementTicker from "@/components/AnnouncementTicker";
+import HeroCarousel from "@/components/HeroCarousel";
+import TeamUpEarthScroll from "@/components/TeamUpEarthScroll";
 
 // --- Hooks for Tilt Effect ---
 function useTilt(ref: React.RefObject<HTMLElement | null>) {
@@ -94,7 +96,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-transparent selection:bg-yellow-400/30">
         <AnnouncementTicker />
-        <Hero />
+        <TeamUpEarthScroll />
+        <section className="w-full relative overflow-hidden bg-transparent flex items-center justify-center py-12">
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neutral-800/20 via-neutral-950 to-neutral-950 pointer-events-none" />
+             <HeroCarousel />
+        </section>
         <Marquee />
         <BentoGrid />
         <CTA />
@@ -106,114 +112,10 @@ export default function Home() {
 
 // --- Components ---
 
-import HeroCarousel from "@/components/HeroCarousel";
+// --- Components ---
 
-function Hero() {
-  const targetRef = useRef(null);
-  
-  return (
-    <section ref={targetRef} className="relative overflow-hidden pt-24 pb-20 lg:pt-32 lg:pb-32">
-      <PremiumBackgroundGrid />
-      
-      {/* Background Orbs - Stabilized */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-        <motion.div 
-            animate={{ 
-                x: [0, 30, 0],
-                y: [0, 20, 0],
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-yellow-400/10 rounded-full blur-[100px]" 
-        />
-        <motion.div 
-            animate={{ 
-                x: [0, -30, 0],
-                y: [0, -20, 0],
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute top-[10%] right-[-10%] w-[500px] h-[500px] bg-purple-400/10 rounded-full blur-[100px]" 
-        />
-      </div>
+// Old Hero Removed
 
-      <div className="container relative z-10 px-4 mx-auto text-center">
-        <motion.div
-           initial={{ opacity: 0, y: 20 }}
-           animate={{ opacity: 1, y: 0 }}
-           transition={{ duration: 0.6, ease: "easeOut" }}
-           className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 text-xs font-bold tracking-wide text-yellow-700 uppercase bg-yellow-50/80 backdrop-blur-sm rounded-full dark:bg-yellow-900/20 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700/30 shadow-sm"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-          </span>
-          The #1 Team Building Platform
-        </motion.div>
-
-        <motion.h1 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-          className="max-w-5xl mx-auto mb-6 text-4xl sm:text-5xl lg:text-8xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 leading-[1.1]"
-        >
-          Find your perfect <br className="hidden sm:block"/>
-          <span className="relative inline-block">
-             <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 dark:from-yellow-300 dark:via-orange-300 dark:to-yellow-400 animate-gradient-x">teammate</span>
-             {/* Simplified underline animation to avoid layout shifts */}
-             <motion.div 
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.8, delay: 0.5, ease: "circOut" }}
-                className="absolute bottom-2 left-0 w-full h-4 bg-yellow-200/50 dark:bg-yellow-900/30 -z-10 -rotate-2 rounded-sm origin-left" 
-             />
-          </span>{" "}
-          in seconds.
-        </motion.h1>
-
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-          className="max-w-2xl mx-auto mb-10 text-lg text-neutral-600 dark:text-neutral-400 sm:text-xl leading-relaxed"
-        >
-          Stop searching blindly. TeamUp uses AI to match you with people who share your skills, interests, and passion. Build your dream team today.
-        </motion.p>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
-          className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
-          <Link
-            href="/discover"
-            className="group relative inline-flex items-center justify-center px-8 py-4 text-base font-bold text-neutral-950 transition-all bg-yellow-400 rounded-full hover:bg-yellow-300 hover:scale-105 active:scale-95 shadow-xl shadow-yellow-400/20 overflow-hidden"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-                Start Discovering <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 translate-x-[-100%] group-hover:animate-shimmer" />
-          </Link>
-          <Link
-            href="/signup"
-            className="inline-flex items-center justify-center px-8 py-4 text-base font-bold text-neutral-900 transition-all bg-white border border-neutral-200 rounded-full hover:bg-neutral-50 dark:bg-neutral-900 dark:text-white dark:border-neutral-800 dark:hover:bg-neutral-800 hover:scale-105 active:scale-95"
-          >
-            Create Profile
-          </Link>
-        </motion.div>
-        
-        {/* CAROUSEL SECTION */}
-        <motion.div
-           initial={{ opacity: 0, y: 50, rotateX: 10 }}
-           animate={{ opacity: 1, y: 0, rotateX: 0 }}
-           transition={{ duration: 1, delay: 0.4, type: "spring", stiffness: 60 }} 
-           className="relative mt-20 mx-auto w-full px-2 sm:px-0"
-        >
-            <HeroCarousel />
-        </motion.div>
-      </div>
-    </section>
-  );
-}
 
 function TiltCard() {
     const ref = useRef<HTMLDivElement>(null);

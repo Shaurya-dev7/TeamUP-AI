@@ -12,8 +12,8 @@ const slides = [
     title: "Build the Brain of Tomorrow",
     description: "Join teams pushing the boundaries of Neural Networks, LLMs, and Computer Vision.",
     icon: <Sparkles className="w-12 h-12 text-white" />,
-    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1600&q=80", // AI/Brain abstract
-    bg: "bg-black",
+    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1920&q=80", 
+    bg: "bg-transparent",
   },
   {
     id: 2,
@@ -21,8 +21,8 @@ const slides = [
     title: "Decimal Points Matter",
     description: "Disrupt banking, crypto, and decentralized finance with secure, scalable solutions.",
     icon: <Zap className="w-12 h-12 text-yellow-400" />,
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80", // Data/Graph
-    bg: "bg-black",
+    image: "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1920&q=80",
+    bg: "bg-transparent",
   },
   {
     id: 3,
@@ -30,8 +30,8 @@ const slides = [
     title: "Code for the Planet",
     description: "Smart grids, carbon tracking, and green tech. Hack for a sustainable future.",
     icon: <Globe className="w-12 h-12 text-emerald-400" />,
-    image: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1600&q=80", // Nature/Eco
-    bg: "bg-black",
+    image: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1920&q=80",
+    bg: "bg-transparent",
   },
   {
     id: 4,
@@ -39,8 +39,8 @@ const slides = [
     title: "Saving Lives with Code",
     description: "From telemedicine to AI diagnostics. Your code can improve global healthcare.",
     icon: <HeartPulse className="w-12 h-12 text-rose-400" />,
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1600&q=80", // Medical/Tech
-    bg: "bg-black",
+    image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1920&q=80",
+    bg: "bg-transparent",
   },
   {
     id: 5,
@@ -48,8 +48,8 @@ const slides = [
     title: "Level Up Reality",
     description: "Create immersive worlds, indie hits, and next-gen VR experiences.",
     icon: <Gamepad2 className="w-12 h-12 text-purple-400" />,
-    image: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=1600&q=80", // Gaming/VR
-    bg: "bg-black",
+    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1920&q=80", 
+    bg: "bg-transparent",
   },
   {
     id: 6,
@@ -57,8 +57,8 @@ const slides = [
     title: "To Infinity & Beyond",
     description: "Rocket telemetry, satellite comms, and orbital mechanics simulation.",
     icon: <Rocket className="w-12 h-12 text-blue-400" />,
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80", // Space
-    bg: "bg-black",
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1920&q=80",
+    bg: "bg-transparent",
   }
 ];
 
@@ -68,12 +68,12 @@ export default function HeroCarousel() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
-    }, 8500); // 8.5 seconds (Much slower as requested)
+    }, 8500); 
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto h-[600px] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 dark:ring-white/10 group bg-neutral-900">
+    <div className="relative w-full max-w-[95%] md:max-w-[1400px] mx-auto h-[50vh] md:h-[80vh] rounded-[2.5rem] overflow-hidden group bg-transparent">
       {slides.map((slide, index) => {
         const isActive = index === current;
         return (
@@ -81,32 +81,32 @@ export default function HeroCarousel() {
             key={slide.id}
             initial={false}
             animate={{ opacity: isActive ? 1 : 0, zIndex: isActive ? 10 : 0 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }} // Smoother cross-fade
+            transition={{ duration: 1.2, ease: "easeInOut" }} 
             style={{ pointerEvents: isActive ? "auto" : "none" }}
             className="absolute inset-0 w-full h-full"
           >
-            {/* Background Image with Scale Effect */}
-            <div className="absolute inset-0 w-full h-full overflow-hidden">
-                <motion.img 
-                    src={slide.image} 
-                    alt={slide.title}
-                    animate={{ scale: isActive ? 1.0 : 1.1 }}
-                    transition={{ duration: 10, ease: "linear" }}
-                    className="w-full h-full object-cover"
-                />
+            {/* Main Image Layer */}
+             <div className="absolute inset-0 w-full h-full">
+                  <motion.img 
+                      src={slide.image} 
+                      alt={slide.title}
+                      animate={{ scale: isActive ? 1.0 : 1.05 }}
+                      transition={{ duration: 10, ease: "linear" }}
+                      className="w-full h-full object-cover relative z-10"
+                  />
             </div>
 
             {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent opacity-90 z-20" />
             
             {/* Content */}
-            <div className="absolute inset-0 p-8 md:p-16 flex flex-col justify-end">
-                <div className="relative z-10 max-w-2xl">
+            <div className="absolute inset-0 p-8 md:p-16 flex flex-col justify-end items-center text-center pb-20 md:pb-24 z-30">
+                <div className="relative z-10 max-w-4xl mx-auto">
                     <motion.div 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={isActive ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
-                    className="mb-6 inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md text-sm font-bold border border-white/20 text-white w-fit"
+                    className="mb-8 inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 backdrop-blur-md text-base font-bold border border-white/20 text-white w-fit mx-auto"
                     >
                         {slide.icon} <span className="uppercase tracking-wider">{slide.theme}</span>
                     </motion.div>
@@ -115,7 +115,7 @@ export default function HeroCarousel() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
                         transition={{ duration: 0.5, delay: 0.4 }}
-                        className="text-5xl md:text-6xl font-black tracking-tight mb-6 text-white leading-[1.1] drop-shadow-2xl"
+                        className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tight mb-8 text-white leading-[1.1] drop-shadow-2xl"
                     >
                     {slide.title}
                     </motion.h2>
@@ -124,7 +124,7 @@ export default function HeroCarousel() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
                         transition={{ duration: 0.5, delay: 0.5 }}
-                        className="text-xl text-neutral-200 mb-10 max-w-xl leading-relaxed font-medium drop-shadow-md"
+                        className="text-xl md:text-2xl text-neutral-200 mb-12 max-w-2xl mx-auto leading-relaxed font-medium drop-shadow-md"
                     >
                     {slide.description}
                     </motion.p>
@@ -133,10 +133,10 @@ export default function HeroCarousel() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
                         transition={{ duration: 0.5, delay: 0.6 }}
-                        className="flex gap-4"
+                        className="flex gap-6 justify-center"
                     >
-                        <Link href="/discover" className="px-8 py-4 bg-yellow-400 text-neutral-950 rounded-xl font-bold text-lg transition-all hover:bg-yellow-300 hover:scale-105 active:scale-95 shadow-xl shadow-yellow-400/20 flex items-center gap-2">
-                            Explore Hackathons <ArrowRight className="w-5 h-5" />
+                        <Link href="/discover" className="px-10 py-5 bg-yellow-400 text-neutral-950 rounded-full font-bold text-xl transition-all hover:bg-yellow-300 hover:scale-105 active:scale-95 shadow-xl shadow-yellow-400/20 flex items-center gap-2">
+                            Explore Hackathons <ArrowRight className="w-6 h-6" />
                         </Link>
                     </motion.div>
                 </div>

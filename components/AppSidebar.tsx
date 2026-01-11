@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import CinematicSwitch from "@/components/ui/cinematic-glow-toggle";
+import { BrandLogo } from "@/components/BrandLogo";
 import type { Session } from "@supabase/supabase-js";
 
 interface AppSidebarProps {
@@ -81,7 +82,12 @@ export default function AppSidebar({ isOpen, onClose, session, profileUsername, 
           >
             {/* Header */}
             <div className="p-6 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-900 shrink-0">
-              <span className="text-xl font-bold tracking-tight">Menu</span>
+              <div className="flex items-center gap-3">
+                  <div className="relative size-8 rounded-full overflow-hidden shadow-sm border border-neutral-200 dark:border-neutral-800">
+                    <BrandLogo className="w-full h-full" />
+                  </div>
+                  <span className="text-xl font-bold tracking-tight">Menu</span>
+              </div>
               <button
                 onClick={onClose}
                 className="p-2 -mr-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"

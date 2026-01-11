@@ -14,6 +14,109 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_roles: {
+        Row: {
+          user_id: string
+          role: 'super_admin' | 'admin' | 'moderator'
+          granted_at: string
+          granted_by: string | null
+        }
+        Insert: {
+          user_id: string
+          role: 'super_admin' | 'admin' | 'moderator'
+          granted_at?: string
+          granted_by?: string | null
+        }
+        Update: {
+          user_id?: string
+          role?: 'super_admin' | 'admin' | 'moderator'
+          granted_at?: string
+          granted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      admin_audit_logs: {
+        Row: {
+          id: number
+          admin_user_id: string
+          action: string
+          target_table: string | null
+          target_id: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          admin_user_id: string
+          action: string
+          target_table?: string | null
+          target_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          admin_user_id?: string
+          action?: string
+          target_table?: string | null
+          target_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_logs_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      system_flags: {
+        Row: {
+          key: string
+          value: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          key: string
+          value?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          key?: string
+          value?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_flags_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chat_members: {
         Row: {
           chat_id: string

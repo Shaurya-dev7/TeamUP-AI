@@ -1,4 +1,6 @@
-// Simple utility to join class names
-export function cn(...args: any[]) {
-  return args.filter(Boolean).join(' ');
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }

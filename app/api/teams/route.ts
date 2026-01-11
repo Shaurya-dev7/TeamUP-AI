@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { TeamSchema } from "@/lib/validators/team";
 
 // Demo data fallback
 function getDemoTeams(search: string, limit: number) {
@@ -258,12 +259,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { name, description, goal, max_members, join_mode, roles_needed } = body;
 
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Team name is required" }, { status: 400 });
+    const body = await request.json();
+    
+    // ZOD VALIDATION
+    const result = TeamSchema.safeParse(body);
+    if (!result.success) {
+       return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
     }
+    
+    const { name, description, goal, max_members, join_mode, roles_needed } = result.data;
+
+    // ... continue with logic using sanitized data ...
 
     // === ATOMIC TRANSACTION ===
     // 1. Create group conversation
