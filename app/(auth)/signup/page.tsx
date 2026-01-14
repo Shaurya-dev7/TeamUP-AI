@@ -7,6 +7,7 @@ import { MoveRight, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function SignupPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -136,8 +137,8 @@ export default function SignupPage() {
         className="w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-neutral-200 bg-white/80 p-8 shadow-2xl backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/80 sm:p-10"
       >
         <div className="flex flex-col items-center text-center">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-400 text-3xl shadow-lg shadow-yellow-400/20 text-white">
-                👋
+            <div className="mb-6 h-20 w-20 rounded-full overflow-hidden shadow-xl shadow-yellow-400/20">
+                <BrandLogo className="w-full h-full" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Create Account</h1>
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">

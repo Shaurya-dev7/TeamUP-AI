@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -21,6 +22,14 @@ const jakarta = Plus_Jakarta_Sans({
 
 import { Toaster } from 'sonner';
 import { GlobalNotifications } from "@/components/global/GlobalNotifications";
+
+export const metadata: Metadata = {
+  title: "TeamUp - Find Teammates",
+  description: "Find your dream team for hackathons, projects, and startups.",
+  icons: {
+    icon: "/brand/logo-light.jpg",
+  }
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
