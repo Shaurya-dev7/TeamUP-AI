@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Send, Plus, Paperclip, Image as ImageIcon, MapPin, X, Mic, MicOff, Loader2 } from "lucide-react";
+import { Send, Plus, Paperclip, Image as ImageIcon, MapPin, X, Mic, MicOff, Loader2, Smile } from "lucide-react";
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { motion, AnimatePresence } from "framer-motion";
 
 // Declare SpeechRecognition types for TypeScript
@@ -56,6 +57,12 @@ export function ChatInput({
 }: ChatInputProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [showMenu, setShowMenu] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+    const onEmojiClick = (emojiData: EmojiClickData) => {
+        onChange(value ? value + emojiData.emoji : emojiData.emoji);
+        // Optional: keep picker open or close it. Keeping it open for multiple emojis often feels better.
+    };
     
     // Voice input state
     const [isListening, setIsListening] = useState(false);
@@ -275,7 +282,7 @@ export function ChatInput({
                         )}
                     </AnimatePresence>
 
-                    <motion.button
+                <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setShowMenu(!showMenu)}
@@ -283,6 +290,37 @@ export function ChatInput({
                     >
                         <Plus className={`h-5 w-5 text-neutral-600 dark:text-neutral-300 transition-transform duration-300 ${showMenu ? 'rotate-45' : ''}`} />
                     </motion.button>
+
+                    {/* Emoji Picker Toggle */}
+                    <div className="relative">
+                        <AnimatePresence>
+                            {showEmojiPicker && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: -10 }}
+                                    exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                                    className="absolute bottom-full left-0 mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden"
+                                >
+                                    <EmojiPicker 
+                                        onEmojiClick={onEmojiClick}
+                                        theme={Theme.AUTO}
+                                        lazyLoadEmojis={true}
+                                        width={320}
+                                        height={400}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                        
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className={`flex h-[44px] w-[44px] items-center justify-center rounded-full transition-colors ml-2 ${showEmojiPicker ? 'bg-yellow-100 dark:bg-yellow-400/20' : 'bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10'}`}
+                        >
+                            <Smile className={`h-5 w-5 ${showEmojiPicker ? 'text-yellow-600 dark:text-yellow-400' : 'text-neutral-600 dark:text-neutral-300'}`} />
+                        </motion.button>
+                    </div>
                 </div>
 
                 {/* Input Area */}

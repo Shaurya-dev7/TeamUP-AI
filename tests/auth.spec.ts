@@ -5,19 +5,19 @@ test.describe('Authentication Pages', () => {
     await page.goto('/login');
     
     // Check page title
-    await expect(page.getByRole('heading', { name: /login/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Welcome Back/i })).toBeVisible();
     
     // Check form elements
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /login/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
   });
 
   test('should load signup page', async ({ page }) => {
     await page.goto('/signup');
     
     // Check page title
-    await expect(page.getByRole('heading', { name: /sign up|create account/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /create account/i })).toBeVisible();
     
     // Check form elements
     const emailInput = page.getByLabel(/email/i);
@@ -31,7 +31,7 @@ test.describe('Authentication Pages', () => {
     await page.goto('/login');
     
     // Try to submit empty form
-    const submitButton = page.getByRole('button', { name: /login/i });
+    const submitButton = page.getByRole('button', { name: /sign in/i });
     await submitButton.click();
     
     // Browser should show validation (required fields)
@@ -43,7 +43,7 @@ test.describe('Authentication Pages', () => {
     await page.goto('/login');
     
     // Click sign up link
-    const signupLink = page.getByRole('link', { name: /sign up/i });
+    const signupLink = page.getByRole('link', { name: /create an account/i });
     if (await signupLink.count() > 0) {
       await signupLink.click();
       await expect(page).toHaveURL(/.*\/signup/);
@@ -52,7 +52,7 @@ test.describe('Authentication Pages', () => {
     await page.goto('/signup');
     
     // Click login link
-    const loginLink = page.getByRole('link', { name: /login/i });
+    const loginLink = page.getByRole('link', { name: /log in/i });
     if (await loginLink.count() > 0) {
       await loginLink.click();
       await expect(page).toHaveURL(/.*\/login/);

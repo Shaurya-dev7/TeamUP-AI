@@ -90,10 +90,12 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: "https://team-up-ai.vercel.app/auth/callback",
+        redirectTo: `${siteUrl}/auth/callback`,
       },
     });
     
@@ -141,7 +143,7 @@ export default function LoginPage() {
 
         <form onSubmit={onSubmit} className="mt-8 space-y-5">
           <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
               Email Address
             </label>
             <input
@@ -161,7 +163,7 @@ export default function LoginPage() {
 
           <div className="space-y-1">
              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                 Password
                 </label>
                 <Link 
@@ -176,6 +178,8 @@ export default function LoginPage() {
                   className="w-full rounded-xl border-2 border-transparent bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-900 transition-all placeholder:text-neutral-400 hover:bg-neutral-200/50 focus:border-yellow-400 focus:bg-white focus:outline-none dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 dark:focus:bg-neutral-950 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   placeholder="••••••••"
