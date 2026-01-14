@@ -9,6 +9,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { Message, MessageBubble } from "@/components/chat/MessageBubble";
 import { TypingBubble } from "@/components/chat/TypingBubble";
 import { X, Users, Menu, Plus, ArrowLeft, Check, UserPlus, LogOut, Shield, Crown, Trash2, Info, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import { DateSeparator } from "@/components/chat/DateSeparator";
 
 
 
@@ -1421,26 +1422,32 @@ export default function ChatClient() {
         }
     };
 
-    return (
-        <div id={`msg-${m.id}`} key={m.id} className="rounded-xl"> {/* Added rounded-xl for highlight */}
-            <MessageBubble 
-                message={m} 
-                isMe={m.is_me || false} 
-                senderName={senderName}
-                senderUsername={senderUsername}
-                showName={activeConv.type === 'group'} 
-                onReply={handleReply}
-                onDelete={handleDeleteMessage}
-                onPin={handlePinMessage}
-                onJumpTo={handleJumpTo}
-                isAdmin={
-                    activeConv.type === 'group' && 
-                    // @ts-ignore
-                    activeConv.participants?.find((p: any) => p.user_id === sessionUserId)?.role === 'admin'
-                }
-            />
-        </div>
-    );
+                                const showDateSeparator = i === 0 || 
+                                    new Date(m.created_at).toDateString() !== new Date(messages[i - 1].created_at).toDateString();
+
+                                return (
+                                    <React.Fragment key={m.id}>
+                                        {showDateSeparator && <DateSeparator date={m.created_at} />}
+                                        <div id={`msg-${m.id}`} className="rounded-xl"> {/* Added rounded-xl for highlight */}
+                                            <MessageBubble 
+                                                message={m} 
+                                                isMe={m.is_me || false} 
+                                                senderName={senderName}
+                                                senderUsername={senderUsername}
+                                                showName={activeConv.type === 'group'} 
+                                                onReply={handleReply}
+                                                onDelete={handleDeleteMessage}
+                                                onPin={handlePinMessage}
+                                                onJumpTo={handleJumpTo}
+                                                isAdmin={
+                                                    activeConv.type === 'group' && 
+                                                    // @ts-ignore
+                                                    activeConv.participants?.find((p: any) => p.user_id === sessionUserId)?.role === 'admin'
+                                                }
+                                            />
+                                        </div>
+                                    </React.Fragment>
+                                );
                             })}
                             
                             {/* Typing Indicators */}

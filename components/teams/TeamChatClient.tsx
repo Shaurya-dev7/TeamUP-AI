@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { Message, MessageBubble } from "@/components/chat/MessageBubble";
+import { DateSeparator } from "@/components/chat/DateSeparator";
 import { Loader2, ArrowLeft, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -103,6 +104,7 @@ export default function TeamChatClient({ conversationId, teamName, teamId, initi
         for (const key in newState) {
            // @ts-ignore
            newState[key].forEach(u => {
+               // @ts-ignore
                online[u.user_id] = u;
            });
         }
@@ -238,14 +240,20 @@ export default function TeamChatClient({ conversationId, teamName, teamId, initi
                     const senderName = msg.sender?.username || "Unknown";
                     const showName = !msg.is_me && (idx === 0 || messages[idx - 1].sender_id !== msg.sender_id);
                     
+                    const showDateSeparator = idx === 0 || 
+                        new Date(msg.created_at).toDateString() !== new Date(messages[idx - 1].created_at).toDateString();
+
                     return (
-                      <MessageBubble 
-                        key={msg.id}
-                        message={msg}
-                        isMe={!!msg.is_me}
-                        senderName={senderName}
-                        showName={showName}
-                      />
+                      <React.Fragment key={msg.id}>
+                        {showDateSeparator && <DateSeparator date={msg.created_at} />}
+                        <MessageBubble 
+                            key={msg.id}
+                            message={msg}
+                            isMe={!!msg.is_me}
+                            senderName={senderName}
+                            showName={showName}
+                        />
+                      </React.Fragment>
                     );
                   })
                 )}

@@ -125,8 +125,8 @@ export function MessageBubble({ message, isMe, senderName, senderUsername, showN
     const handleMenuOpen = () => {
         if (buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
-            // If button is in top 200px of viewport, show menu below
-            if (rect.top < 200) {
+            // If button is in top 450px of viewport, show menu below to avoid header
+            if (rect.top < 450) {
                 setMenuPosition('below');
             } else {
                 setMenuPosition('above');
