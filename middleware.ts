@@ -18,7 +18,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Supabase Auth Session
-  return updateSession(request);
+  const response = await updateSession(request);
+
+  // 3. Security Headers
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  return response;
 }
 
 export const config = {

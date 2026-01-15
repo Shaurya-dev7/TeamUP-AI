@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/BrandLogo";
+import { SignupSchema } from "@/lib/validators/auth";
 
 export default function SignupPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -26,7 +27,16 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
 
-    // Sign up with Supabase Auth
+    // 1. Validate Input with Zod
+    const result = SignupSchema.safeParse({ email, password });
+    if (!result.success) {
+      setLoading(false);
+      const firstError = result.error.issues[0]?.message || "Invalid input";
+      setError(firstError);
+      return;
+    }
+
+    // 2. Sign up with Supabase Auth
     // We send NO metadata to ensuring the 'handle_new_user' trigger
     // does not attempt to create a profile row.
     // Profile creation is strictly deferred to the /create-profile step after verification.
@@ -40,12 +50,9 @@ export default function SignupPage() {
       }
     });
 
-    console.log("Signup Result:", { user: data?.user, session: data?.session, error: authError });
-
     if (data?.session) {
       // Auto-login happened (Auto Confirm is likely ON in Supabase)
       // In this case, we should just redirect to create-profile directly
-      console.log("Auto-login detected. Redirecting to create-profile...");
       router.push("/create-profile");
       return;
     }

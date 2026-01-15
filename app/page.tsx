@@ -40,7 +40,7 @@ function PremiumBackgroundGrid() {
     return (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
             {/* Base Dot Pattern */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+            <div className="absolute inset-0 bg-[url('/assets/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
             
              {/* Animated Grid - Made semi-transparent for glassy feel */}
             <div className="absolute inset-0 h-full w-full bg-neutral-50/50 dark:bg-neutral-950/50 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff33_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>

@@ -4,6 +4,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { TeamSchema } from "@/lib/validators/team";
+import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from "@/lib/profile/completeness";
 
 // Demo data fallback
 function getDemoTeams(search: string, limit: number) {
@@ -64,6 +65,13 @@ export async function GET(request: NextRequest) {
 
     // Base query for active teams
     let selectQuery = `
+      id,
+      name,
+      goal,
+      description,
+      join_mode,
+      max_members,
+      created_at,
       id,
       name,
       goal,
@@ -265,7 +273,24 @@ export async function POST(request: NextRequest) {
     // ZOD VALIDATION
     const result = TeamSchema.safeParse(body);
     if (!result.success) {
-       return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
+       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
+    }
+
+    // SECURITY: Enforce profile completeness
+    // We already have the user object, but we need the profile to check completeness
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !userProfile) {
+       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    const completeness = checkProfileCompleteness(userProfile, { minimal: true });
+    if (!completeness.isComplete) {
+       return NextResponse.json({ error: INCOMPLETE_PROFILE_ERROR, missing: completeness.missing }, { status: 403 });
     }
     
     const { name, description, goal, max_members, join_mode, roles_needed } = result.data;

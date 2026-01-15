@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 
 import { createServiceClient } from '@/lib/supabase/service';
 import { NextResponse } from 'next/server';
+import { verifyAdminForApi } from '@/lib/admin/auth';
 
 // Define types locally if not available in generated types
 type HackathonInsert = {
@@ -24,6 +25,15 @@ type HackathonInsert = {
 };
 
 export async function GET() {
+  // SECURITY: Admin only
+  const admin = await verifyAdminForApi();
+  // Check for cron secret if not admin (optional, assuming cron usage)
+  // const isCron = request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
+  
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
   const now = new Date().toISOString();
   

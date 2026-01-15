@@ -148,7 +148,7 @@ export default function ProfilePage() {
       if (mounted) setSessionUserId(userId);
       
       if (userId) {
-          const { data: me } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+          const { data: me } = await supabase.from('profiles').select('id, username, name, avatar_url, profile_completed').eq('id', userId).maybeSingle();
           const meProfile = me as any; // Cast to any to avoid 'never' issue if inference fails
           if (mounted && meProfile) {
             setCurrentUsername(meProfile.username);

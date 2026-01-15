@@ -14,7 +14,18 @@ const tracker = new Map<string, RateLimitContext>();
  * - Fails open (if memory resets, traffic flows)
  * - Returns { success: boolean, reset: number }
  */
+/**
+ * Basic In-Memory Rate Limiter
+ * 
+ * Rules:
+ * - 10 requests / 10 seconds per IP
+ * - Fails open (if memory resets, traffic flows)
+ * - Returns { success: boolean, reset: number }
+ */
 export async function rateLimit(identifier: string) {
+  // Use a more specific identifier if possible, but basic IP is okay for this level.
+  // Note: Vercel headers (x-forwarded-for) are generally reliable when trustProxy is handled by the platform.
+  
   const now = Date.now();
   const windowSize = 10 * 1000; // 10 seconds
   const limit = 10; // 10 requests per window

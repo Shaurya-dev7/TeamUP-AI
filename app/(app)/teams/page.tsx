@@ -96,7 +96,6 @@ export default function TeamsPage() {
               });
               if (res.ok) {
                 const result = await res.json();
-                console.log("My teams result:", result);
                 if (result.teams) {
                   setMyTeams(result.teams);
                 }
@@ -116,7 +115,6 @@ export default function TeamsPage() {
           const res = await fetch(`/api/teams?limit=50`, { headers });
           if (res.ok) {
             const result = await res.json();
-            console.log("Explore teams result:", result);
             if (result.teams && result.teams.length > 0) {
               setTeams(result.teams);
             }

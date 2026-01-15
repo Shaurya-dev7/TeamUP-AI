@@ -56,8 +56,15 @@ export async function GET(request: NextRequest) {
   try {
     // 1. Security Check (Basic prevention of accidental public use)
     const { searchParams } = new URL(request.url);
-    if (searchParams.get("secret") !== "teamup_seed") {
-      return NextResponse.json({ error: "Unauthorized. Pass ?secret=teamup_seed" }, { status: 401 });
+    const secret = process.env.SEED_SECRET;
+    
+    if (!secret) {
+      // If secret is not configured in env, DISABLE the route entirely for safety
+      return NextResponse.json({ error: "Seed route is disabled." }, { status: 403 });
+    }
+
+    if (searchParams.get("secret") !== secret) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
     // 2. Get a valid user to be the owner (Use the first found profile)

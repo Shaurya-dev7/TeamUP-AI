@@ -6,7 +6,12 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/create-profile";
+  let next = searchParams.get("next") ?? "/create-profile";
+
+  // SECURITY: Validate open redirect
+  if (!next.startsWith("/") || next.startsWith("//")) {
+    next = "/create-profile";
+  }
 
   if (code) {
     console.log(`[Auth Callback] Processing code exchange. Next path: ${next}`);
@@ -50,7 +55,7 @@ export async function GET(request: Request) {
       }
 
       if (user) {
-        console.log(`[Auth Callback] User found: ${user.id} (${user.email})`);
+        console.log(`[Auth Callback] User authenticated: ${user.id}`);
 
         // Check if profile exists and is complete
         const { data: profile, error: profileError } = await supabase
