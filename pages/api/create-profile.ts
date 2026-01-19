@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { logApiError } from '@/lib/utils/error-utils';
 
 // Initialize Supabase Service Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -114,19 +115,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         if (retryErr) {
-             return res.status(500).json({ error: `Failed to save profile (Retry failed): ${retryErr.message}` });
+             logApiError('Profile upsert retry failed', retryErr, { userId });
+             return res.status(500).json({ error: 'Failed to save profile' });
         }
         // Success on retry
         return res.status(200).json({ success: true, warning: "Profile saved, but College ID could not be stored due to pending database updates." });
       }
 
-      return res.status(500).json({ error: `Failed to save profile: ${profileErr.message}` });
+      logApiError('Profile upsert', profileErr, { userId });
+      return res.status(500).json({ error: 'Failed to save profile' });
     }
 
     return res.status(200).json({ success: true });
 
   } catch (error: any) {
-    console.error('Create Profile API Error:', error);
-    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+    logApiError('Create Profile API', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

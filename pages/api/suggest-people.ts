@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -14,8 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .single();
 
   if (userError || !userProfile) {
-    console.error('User profile error:', userError);
-    return res.status(404).json({ error: 'Username not found', details: userError?.message, code: userError?.code });
+    logApiError('Suggest people user lookup', userError, { username });
+    return res.status(404).json({ error: 'Username not found' });
   }
 
   // Parse user's skills
@@ -30,8 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select('id,username,skills')
     .neq('username', username);
   if (allError) {
-    console.error('All profiles error:', allError);
-    return res.status(500).json({ error: 'Failed to fetch profiles', details: allError.message, code: allError.code });
+    logApiError('Suggest people fetch all', allError, { username });
+    return res.status(500).json({ error: 'Failed to fetch profiles' });
   }
 
   // Score by number of overlapping skills

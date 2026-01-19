@@ -2,14 +2,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from '@/lib/profile/completeness';
+import { requireAuth } from '@/lib/utils/auth-guard';
 
-// POST: { sender_id, receiver_id, content }
+// POST: { receiver_id, content }
+// SECURITY: sender_id is ALWAYS derived from auth token, never from body
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const { sender_id, receiver_id, content } = req.body;
-  if (!sender_id || !receiver_id || !content) {
-    return res.status(400).json({ error: 'sender_id, receiver_id, and content required' });
+  
+  // SECURITY: Get sender from auth token, not request body
+  const user = await requireAuth(req, res);
+  if (!user) return; // 401 already sent
+  
+  const sender_id = user.id; // ALWAYS use auth-derived ID
+  const { receiver_id, content } = req.body;
+  
+  // sender_id is no longer accepted from body - ignored even if provided
+  if (!receiver_id || !content) {
+    return res.status(400).json({ error: 'receiver_id and content required' });
   }
+  
   const supabase = await createClient();
 
   // Check sender profile completeness before allowing message
@@ -90,7 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select('*')
     .single();
   if (msgError) {
-    return res.status(500).json({ error: 'Failed to send message', details: msgError.message });
+    logApiError('Chat message insert', msgError, { chat_id: chatId });
+    return res.status(500).json({ error: 'Failed to send message' });
   }
   res.status(201).json({ message });
 }

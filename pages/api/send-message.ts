@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@supabase/supabase-js';
+import { logApiError } from '@/lib/utils/error-utils';
 
 /**
  * Send Message API with Block Check
@@ -104,8 +105,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single();
 
     if (msgError) {
-      console.error('Message insert error:', msgError);
-      return res.status(500).json({ error: 'Failed to send message', details: msgError.message });
+      logApiError('Message insert (no participants)', msgError, { chat_id });
+      return res.status(500).json({ error: 'Failed to send message' });
     }
 
     return res.json({ success: true, message_id: (message as any)?.id, delivered: true });
@@ -161,8 +162,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .single();
 
   if (msgError) {
-    console.error('Message insert error:', msgError);
-    return res.status(500).json({ error: 'Failed to send message', details: msgError.message });
+    logApiError('Message insert', msgError, { chat_id });
+    return res.status(500).json({ error: 'Failed to send message' });
   }
 
   return res.json({ success: true, message_id: (message as any)?.id, delivered: true });

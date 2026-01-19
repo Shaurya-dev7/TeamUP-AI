@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@supabase/supabase-js';
 import { logUserInteraction, logNegativeFeedback, INTERACTION_TYPES, NEGATIVE_FEEDBACK_TYPES } from '@/lib/events/logger';
 import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from '@/lib/profile/completeness';
+import { logApiError } from '@/lib/utils/error-utils';
 
 /**
  * Follow/Unfollow API (Username-based)
@@ -93,8 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
 
     if (error) {
-      console.error('Follow insert error:', error);
-      return res.status(500).json({ error: 'Failed to follow', details: error.message });
+      logApiError('Follow insert', error, { follower: followerUsername, following: following_username });
+      return res.status(500).json({ error: 'Failed to follow' });
     }
 
     // Log to ML events (fire-and-forget)
@@ -118,8 +119,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('following', following_username);
 
     if (error) {
-      console.error('Unfollow delete error:', error);
-      return res.status(500).json({ error: 'Failed to unfollow', details: error.message });
+      logApiError('Unfollow delete', error, { follower: followerUsername, following: following_username });
+      return res.status(500).json({ error: 'Failed to unfollow' });
     }
 
     // Log to ML events (fire-and-forget)

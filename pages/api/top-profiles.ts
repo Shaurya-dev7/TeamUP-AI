@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { toPublicUserWithMetrics } from '@/lib/dto/public-user-dto';
+import { sendSafeError, logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -15,8 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .limit(limit * 2); // Get more to filter
 
   if (profilesError) {
-    console.error('Top profiles error:', profilesError);
-    return res.status(500).json({ error: 'Failed to fetch profiles', details: profilesError.message, code: profilesError.code });
+    logApiError('Top profiles fetch', profilesError);
+    return sendSafeError(res, 500, 'internal_error');
   }
 
   if (!allProfiles || allProfiles.length === 0) {
@@ -45,18 +47,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   // Add follower counts and sort by followers (descending)
-  // Map to consistent structure (handle different column names)
+  // Map to consistent structure using DTO (no internal IDs exposed)
   const topProfiles = (allProfiles || [])
     .filter((p: any) => !user_id || p.id !== user_id) // Exclude current user if provided
     .map((p: any) => ({
-      id: p.id,
-      username: p.username,
-      name: p.name,
-      skills: p.skills || null,
-      college: p.college || null,
-      location: p.location || null,
-      followers_count: followerMap.get(p.id) || 0,
-      following_count: followingMap.get(p.id) || 0,
+      ...toPublicUserWithMetrics(p, {
+        followers_count: followerMap.get(p.id) || 0,
+        following_count: followingMap.get(p.id) || 0,
+      }),
       match_count: 0, // Placeholder
       matching_interests: [],
       matching_interests_count: 0

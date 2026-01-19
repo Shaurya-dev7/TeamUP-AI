@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { logApiError } from '@/lib/utils/error-utils';
 
 // POST: { username, team_size }
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: recommendations, error: recError } = await supabase
     .rpc('recommend_profiles', { p_profile_id: (userProfile as any).id, p_limit: team_size } as any);
   if (recError) {
-    return res.status(500).json({ error: 'Failed to get team recommendations', details: recError.message });
+    logApiError('Team recommendations RPC', recError, { username });
+    return res.status(500).json({ error: 'Failed to get team recommendations' });
   }
   // Add the user to the start of the team
   const team = [{ ...(userProfile as any) }, ...(recommendations || [])];

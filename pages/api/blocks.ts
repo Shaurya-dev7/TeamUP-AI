@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@supabase/supabase-js';
 import { logNegativeFeedback, NEGATIVE_FEEDBACK_TYPES } from '@/lib/events/logger';
 import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from '@/lib/profile/completeness';
+import { logApiError } from '@/lib/utils/error-utils';
 
 /**
  * Block/Unblock API
@@ -129,8 +130,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
 
     if (error) {
-      console.error('Block insert error:', error);
-      return res.status(500).json({ error: 'Failed to block user', details: error.message });
+      logApiError('Block insert', error, { blocker: blockerUsername, blocked: blocked_username });
+      return res.status(500).json({ error: 'Failed to block user' });
     }
 
     // Auto-unfollow: Remove follow relationship in BOTH directions
@@ -173,8 +174,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('blocked_username', blocked_username);
 
     if (error) {
-      console.error('Unblock delete error:', error);
-      return res.status(500).json({ error: 'Failed to unblock user', details: error.message });
+      logApiError('Unblock delete', error, { blocker: blockerUsername, blocked: blocked_username });
+      return res.status(500).json({ error: 'Failed to unblock user' });
     }
 
     return res.json({ success: true, message: `Unblocked ${blocked_username}` });

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
 import { DirectChatSchema } from '@/lib/validators/chat';
+import { logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -8,7 +9,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const validation = DirectChatSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({ error: 'Invalid input', details: validation.error.flatten() });
+      // Validation errors are safe to return - they describe user input issues
+      return res.status(400).json({ error: 'Invalid input' });
     }
     const { otherId } = validation.data;
 
@@ -88,8 +90,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }).select().single();
 
     if (convError || !conv) {
-      console.error('Error creating conversation:', convError);
-      return res.status(500).json({ error: 'Failed to create chat', details: convError?.message });
+      logApiError('Create conversation', convError);
+      return res.status(500).json({ error: 'Failed to create chat' });
     }
 
     // Add Participants
@@ -99,8 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
 
     if (membersError) {
-      console.error('Error adding participants:', membersError);
-      return res.status(500).json({ error: 'Failed to add participants', details: membersError?.message });
+      logApiError('Add chat participants', membersError);
+      return res.status(500).json({ error: 'Failed to add participants' });
     }
 
     // Insert starter message (system-authored, sender_id = null)

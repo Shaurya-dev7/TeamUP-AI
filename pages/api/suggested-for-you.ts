@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { toPublicUserWithMetrics } from '@/lib/dto/public-user-dto';
+import { logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -42,8 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const filteredProfiles = (allProfiles || []).filter((p: any) => !followingIds.includes(p.id));
 
     if (profilesError) {
-      console.error('Suggested profiles error:', profilesError);
-      return res.status(500).json({ error: 'Failed to fetch profiles', details: profilesError.message, code: profilesError.code });
+      logApiError('Suggested profiles fetch', profilesError);
+      return res.status(500).json({ error: 'Failed to fetch profiles' });
     }
 
     if (!allProfiles || allProfiles.length === 0) {
@@ -110,21 +112,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .sort((a: any, b: any) => b.score - a.score)
       .slice(0, limit)
       .map((p: any) => ({
-        id: p.id,
-        username: p.username,
-        name: p.name,
-        skills: p.skills || null,
-        college: p.college || null,
-        location: p.location || null,
-        followers_count: p.followers_count,
-        following_count: p.following_count,
-        matching_interests_count: p.matching_interests_count
+        ...toPublicUserWithMetrics(p, {
+          followers_count: p.followers_count,
+          following_count: p.following_count,
+          matching_interests_count: p.matching_interests_count,
+        }),
       }));
 
   res.json({ suggestions });
   } catch (err: any) {
-    console.error('Suggested-for-you handler error:', err);
-    return res.status(500).json({ error: 'Internal server error', details: err?.message ?? String(err) });
+    logApiError('Suggested-for-you handler', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 

@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getExcludedUsernames } from '@/lib/recommendations/filters';
 import { calculateUserScore, getColdStartCandidates, ScoredUser } from '@/lib/recommendations/scorer';
 import { checkProfileCompleteness } from '@/lib/profile/completeness';
+import { toPublicUserWithMetrics, PublicUserWithMetricsDTO } from '@/lib/dto/public-user-dto';
 
 /**
  * Recommendations API
@@ -180,20 +181,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }));
     }
 
-    // Return ordered list with match percentage (NO scores exposed)
+    // Return ordered list with match percentage (NO scores or IDs exposed)
+    // Use DTO to ensure consistent, safe data structure
     return res.json({
       recommendations: results.map(u => ({
-        id: u.profile.id, // Required for UI actions
-        username: u.profile.username,
-        name: u.profile.name,
-        college: u.profile.college,
-        workplace: u.profile.workplace,
-        location: u.profile.location, // Required for UI
-        avatar_url: u.profile.profile_picture_url, // Required for UI
-        skills: u.profile.skills,
-        interests: u.profile.interests,
-        matchPercentage: u.matchPercentage,
-        // DO NOT expose: rawScore, finalScore, topReasons
+        ...toPublicUserWithMetrics(u.profile, { matchPercentage: u.matchPercentage }),
+        interests: u.profile.interests, // Add interests which is allowed
+        workplace: u.profile.workplace, // Add workplace which is allowed
       })),
       count: results.length,
     });

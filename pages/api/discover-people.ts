@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { toPublicUserList } from '@/lib/dto/public-user-dto';
+import { sendSafeError, logApiError } from '@/lib/utils/error-utils';
 
 // GET: /api/discover-people?limit=10
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,8 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .limit(limit);
     
   if (error) {
-    console.error('Discover people error:', error);
-    return res.status(500).json({ error: 'Failed to get profiles', details: error.message, code: error.code });
+    logApiError('Discover people', error);
+    return sendSafeError(res, 500, 'internal_error');
   }
   
   if (!profiles || profiles.length === 0) {
@@ -22,15 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.json({ profiles: [] });
   }
   
-  // Map to consistent structure
-  const mappedProfiles = profiles.map((p: any) => ({
-    id: p.id,
-    username: p.username,
-    name: p.name,
-    skills: p.skills || null,
-    college: p.college || null,
-    location: p.location || null
-  }));
+  // Map to consistent structure using DTO (no internal IDs exposed)
+  const mappedProfiles = toPublicUserList(profiles);
   
   res.json({ profiles: mappedProfiles });
 }

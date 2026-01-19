@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { toPublicUserWithMetrics } from '@/lib/dto/public-user-dto';
+import { sendSafeError, logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -34,18 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         followerMap.set(fc.following_id, (followerMap.get(fc.following_id) || 0) + 1);
       });
 
-      // Map to consistent structure
-      const profilesWithCounts = results.map((p: any) => ({
-        id: p.id,
-        username: p.username,
-        name: p.name,
-        // bio removed
-        // avatar_url removed
-        skills: p.skills,
-        college: p.college,
-        location: p.location,
-        followers_count: followerMap.get(p.id) || 0
-      }));
+      // Map to consistent structure using DTO
+      const profilesWithCounts = results.map((p: any) =>
+        toPublicUserWithMetrics(p, { followers_count: followerMap.get(p.id) || 0 })
+      );
 
       return res.json({ profiles: profilesWithCounts });
     }
@@ -61,8 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .limit(parseInt(limit as string) || 20);
 
   if (error) {
-    console.error('Search error:', error);
-    return res.status(500).json({ error: 'Search failed', details: error.message, code: error.code });
+    logApiError('Search profiles fallback', error, { query: searchQuery });
+    return sendSafeError(res, 500, 'internal_error');
   }
 
   // Get follower counts
@@ -79,18 +73,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     followerMap.set(fc.following_id, (followerMap.get(fc.following_id) || 0) + 1);
   });
 
-  // Map to consistent structure
-  const profilesWithCounts = (profiles || []).map((p: any) => ({
-    id: p.id,
-    username: p.username,
-    name: p.name,
-    // bio removed
-    // avatar_url removed
-    skills: p.skills || null,
-    college: p.college || null,
-    location: p.location || null,
-    followers_count: followerMap.get(p.id) || 0
-  }));
+  // Map to consistent structure using DTO
+  const profilesWithCounts = (profiles || []).map((p: any) =>
+    toPublicUserWithMetrics(p, { followers_count: followerMap.get(p.id) || 0 })
+  );
 
   res.json({ profiles: profilesWithCounts });
 }

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -18,8 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq('profile_id', user_id);
 
   if (interestsError) {
-    console.error('Interests error:', interestsError);
-    return res.status(500).json({ error: 'Failed to fetch user interests', details: interestsError.message, code: interestsError.code });
+    logApiError('Fetch user interests', interestsError, { user_id });
+    return res.status(500).json({ error: 'Failed to fetch user interests' });
   }
 
   // If user has no interests, return empty
@@ -37,8 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .neq('profile_id', user_id);
 
   if (matchError) {
-    console.error('Match error:', matchError);
-    return res.status(500).json({ error: 'Failed to find matching profiles', details: matchError.message, code: matchError.code });
+    logApiError('Find matching profiles', matchError, { user_id });
+    return res.status(500).json({ error: 'Failed to find matching profiles' });
   }
 
   if (!matchingInterests || matchingInterests.length === 0) {
@@ -68,8 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .in('id', profileIds);
 
   if (profilesError) {
-    console.error('Profiles fetch error:', profilesError);
-    return res.status(500).json({ error: 'Failed to fetch profiles', details: profilesError.message, code: profilesError.code });
+    logApiError('Fetch profiles by interest', profilesError, { user_id });
+    return res.status(500).json({ error: 'Failed to fetch profiles' });
   }
 
   // Combine profile data with matching interests - map to consistent structure

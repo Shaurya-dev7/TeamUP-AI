@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
 import { GroupChatSchema } from '@/lib/validators/chat';
+import { logApiError } from '@/lib/utils/error-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -8,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const validation = GroupChatSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({ error: 'Invalid input', details: validation.error.flatten() });
+      return res.status(400).json({ error: 'Invalid input' });
     }
     const { name, memberIds } = validation.data;
 
@@ -47,8 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }).select().single();
 
     if (chatError || !chat) {
-      console.error('Error creating group chat (service):', chatError);
-      return res.status(500).json({ error: 'Failed to create group chat', details: chatError?.message });
+      logApiError('Create group chat', chatError);
+      return res.status(500).json({ error: 'Failed to create group chat' });
     }
 
     // Add members: creator + selected members
@@ -63,10 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error: membersError } = await supabase.from('conversation_participants').insert(membersPayload);
     
     if (membersError) {
-      console.error('Error adding group members (service):', membersError);
-      // Rollback chat if possible (manual deletion)? Use atomic logic if we could.
-      // For now, return error.
-      return res.status(500).json({ error: 'Failed to add group members', details: membersError?.message });
+      logApiError('Add group members', membersError);
+      return res.status(500).json({ error: 'Failed to add group members' });
     }
 
     // Insert starter message (system-authored, sender_id = null)

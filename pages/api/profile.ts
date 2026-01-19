@@ -1,6 +1,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { toPublicProfile, toPublicFollowUserList } from '@/lib/dto/public-user-dto';
+import { sendSafeError, logApiError } from '@/lib/utils/error-utils';
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,8 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .maybeSingle();
 
     if (error) {
-      console.error('Profile fetch error:', error);
-      return res.status(500).json({ error: 'Failed to fetch profile', details: error.message, code: error.code });
+      logApiError('Profile fetch', error, { username });
+      return sendSafeError(res, 500, 'internal_error');
     }
 
     if (!profile) {
@@ -123,16 +125,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Parse interests into an array
     const interests = (profile as any).interests ? (profile as any).interests.split(/[;,]/).map((s: string) => s.trim()).filter(Boolean) : [];
 
+    // Serialize profile through DTO to prevent data leakage
+    const publicProfile = toPublicProfile(profile, {
+      followers_count: followersCount || 0,
+      following_count: followingCount || 0,
+    });
+
     res.json({
-      profile,
-      followers: followers, // List might be partial
-      following: following,
-      followers_count: followersCount || 0, // Trust the database count
+      profile: publicProfile,
+      followers: toPublicFollowUserList(followers),
+      following: toPublicFollowUserList(following),
+      followers_count: followersCount || 0,
       following_count: followingCount || 0,
       interests,
     });
   } catch (err) {
-    console.error('API /api/profile unexpected error:', err);
-    return res.status(500).json({ error: 'Unexpected server error', details: err instanceof Error ? err.message : err });
+    logApiError('Profile API unexpected error', err, { username: req.query.username });
+    return sendSafeError(res, 500, 'internal_error');
   }
 }

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { logApiError } from '@/lib/utils/error-utils';
 
 
 
@@ -34,7 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq('username', username)
     .single();
   if (userError || !userProfile) {
-    return res.status(404).json({ error: 'Username not found', details: userError?.message });
+    logApiError('Suggest team user lookup', userError, { username });
+    return res.status(404).json({ error: 'Username not found' });
   }
 
   // Parse user's skills

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { TeamSchema } from "@/lib/validators/team";
 import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from "@/lib/profile/completeness";
+import { logApiError } from "@/lib/utils/error-utils";
 
 // Demo data fallback
 function getDemoTeams(search: string, limit: number) {
@@ -316,8 +317,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (convError || !conversation) {
-      console.error("Conversation creation failed:", convError);
-      return NextResponse.json({ error: `Failed to create team chat: ${convError?.message || 'Unknown error'}` }, { status: 500 });
+      logApiError("Conversation creation", convError);
+      return NextResponse.json({ error: "Failed to create team chat" }, { status: 500 });
     }
 
     // Step 2: Create team with conversation_id
@@ -340,8 +341,8 @@ export async function POST(request: NextRequest) {
       // Rollback: delete conversation
       // @ts-ignore
       await supabaseAdmin.from("conversations").delete().eq("id", conversation.id);
-      console.error("Team creation failed:", teamError);
-      return NextResponse.json({ error: `Failed to create team: ${teamError?.message || 'Unknown error'}` }, { status: 500 });
+      logApiError("Team creation", teamError);
+      return NextResponse.json({ error: "Failed to create team" }, { status: 500 });
     }
 
     // Step 3: Add creator as leader
