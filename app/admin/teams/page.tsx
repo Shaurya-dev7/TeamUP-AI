@@ -53,7 +53,7 @@ export default function TeamsPage() {
   const searchParams = useSearchParams();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [search, setSearch] = useState(searchParams?.get('search') || '');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
 

@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySuperAdminForApi, logAdminAction, AdminActions } from '@/lib/admin';
 import { createServiceClient } from '@/lib/supabase/service';
+import { AdminSystemFlagSchema } from '@/lib/validators/admin';
 
 /**
  * GET /api/admin/system
@@ -30,7 +31,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('[Admin System] Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch system flags' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -48,11 +49,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { key, value } = body;
+    const validation = AdminSystemFlagSchema.safeParse(body);
 
-    if (!key || typeof value !== 'boolean') {
-      return NextResponse.json({ error: 'Key and boolean value required' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Invalid input', details: validation.error.flatten() }, { status: 400 });
     }
+
+    const { key, value } = validation.data;
 
     // Get current value for audit log
     const { data: currentFlag } = await supabase
@@ -92,6 +95,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Admin System Update] Error:', error);
-    return NextResponse.json({ error: 'Failed to update flag' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminForApi, verifySuperAdminForApi, logAdminAction, AdminActions } from '@/lib/admin';
 import { createServiceClient } from '@/lib/supabase/service';
+import { AdminUserActionSchema } from '@/lib/validators/admin';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -63,6 +64,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       action: AdminActions.VIEW_USER,
       targetTable: 'profiles',
       targetId: userId,
+      ip: request.headers.get('x-forwarded-for') ?? 'unknown',
+      userAgent: request.headers.get('user-agent') ?? 'unknown',
     });
 
     return NextResponse.json({
@@ -99,11 +102,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const { action, reason } = body;
+    const validation = AdminUserActionSchema.safeParse(body);
 
-    if (!action) {
-      return NextResponse.json({ error: 'Action is required' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Invalid input', details: validation.error.flatten() }, { status: 400 });
     }
+
+    const { action, reason, newUsername } = validation.data;
 
     // Prevent self-modification
     if (userId === admin.id) {
@@ -227,8 +232,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
 
       case 'reset_username': {
-        const { newUsername } = body;
         if (!newUsername) {
+          // Should not happen due to Zod refinement, but safe fallback
           return NextResponse.json({ error: 'New username is required' }, { status: 400 });
         }
 
@@ -295,7 +300,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('[Admin User Action] Error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Action failed' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

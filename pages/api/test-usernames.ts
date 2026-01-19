@@ -46,8 +46,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         results.found.push({
           username: profile.username,
           id: profile.id,
-          display_name: profile.display_name || profile.name || profile.full_name || null,
-          bio: profile.bio || profile.description || null,
+          display_name: (profile as any).display_name || profile.name || (profile as any).full_name || null,
+          bio: (profile as any).bio || (profile as any).description || null,
           allColumns: Object.keys(profile) // Include all available columns for debugging
         });
       } else {

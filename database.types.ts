@@ -1022,8 +1022,170 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      },
+      conversations: {
+        Row: {
+          id: string
+          type: string
+          title: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          type: string
+          title?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          type?: string
+          title?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      },
+      messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string | null
+          content: string
+          message_type: string
+          input_method: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id?: string | null
+          content: string
+          message_type: string
+          input_method?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string | null
+          content?: string
+          message_type?: string
+          input_method?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      conversation_participants: {
+      Row: {
+        conversation_id: string
+        user_id: string
+        role: string
+        last_read_at: string | null
+        created_at: string
       }
+      Insert: {
+        conversation_id: string
+        user_id: string
+        role: string
+        last_read_at?: string | null
+        created_at?: string
+      }
+      Update: {
+        conversation_id?: string
+        user_id?: string
+        role?: string
+        last_read_at?: string | null
+        created_at?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "conversation_participants_conversation_id_fkey"
+          columns: ["conversation_id"]
+          isOneToOne: false
+          referencedRelation: "conversations"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "conversation_participants_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }
+      ]
     }
+    user_reports: {
+      Row: {
+        id: string
+        reporter_id: string
+        reported_user_id: string
+        reason: string
+        description: string | null
+        status: 'pending' | 'resolved' | 'dismissed'
+        severity: string | null
+        created_at: string
+        resolved_at: string | null
+        resolved_by: string | null
+      }
+      Insert: {
+        id?: string
+        reporter_id: string
+        reported_user_id: string
+        reason: string
+        description?: string | null
+        status?: 'pending' | 'resolved' | 'dismissed'
+        severity?: string | null
+        created_at?: string
+        resolved_at?: string | null
+        resolved_by?: string | null
+      }
+      Update: {
+        id?: string
+        reporter_id?: string
+        reported_user_id?: string
+        reason?: string
+        description?: string | null
+        status?: 'pending' | 'resolved' | 'dismissed'
+        severity?: string | null
+        created_at?: string
+        resolved_at?: string | null
+        resolved_by?: string | null
+      }
+      Relationships: [
+         {
+          foreignKeyName: "user_reports_reporter_id_fkey"
+          columns: ["reporter_id"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "user_reports_reported_user_id_fkey"
+          columns: ["reported_user_id"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }
+      ]
+    }
+  }
     Views: {
       [_ in never]: never
     }

@@ -6,6 +6,8 @@ export interface AuditLogParams {
   targetTable?: string;
   targetId?: string;
   metadata?: Record<string, unknown>;
+  ip?: string;
+  userAgent?: string;
 }
 
 /**
@@ -19,6 +21,8 @@ export async function logAdminAction({
   targetTable,
   targetId,
   metadata,
+  ip,
+  userAgent,
 }: AuditLogParams): Promise<void> {
   const supabase = createServiceClient();
 
@@ -29,7 +33,11 @@ export async function logAdminAction({
       action,
       target_table: targetTable ?? null,
       target_id: targetId ?? null,
-      metadata: metadata ?? null,
+      metadata: {
+        ...((metadata as any) ?? {}),
+        ip,
+        userAgent,
+      },
     });
 
   if (error) {

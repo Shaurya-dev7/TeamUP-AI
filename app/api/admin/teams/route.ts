@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter
     if (filter !== 'all') {
-      query = query.eq('status', filter);
+      query = query.eq('status', filter as any);
     }
 
     // Pagination

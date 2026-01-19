@@ -2,7 +2,29 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useOnClickOutside } from "usehooks-ts";
+import { type RefObject } from "react";
+// import { useOnClickOutside } from "usehooks-ts"; // Removed missing dependency
+
+function useOnClickOutside<T extends HTMLElement = HTMLElement>(
+  ref: RefObject<T | null>,
+  handler: (event: MouseEvent | TouchEvent) => void,
+  mouseEvent: "mousedown" | "mouseup" = "mousedown"
+): void {
+  React.useEffect(() => {
+    const listener = (event: MouseEvent | TouchEvent) => {
+      const el = ref?.current;
+      // Do nothing if clicking ref's element or descendent elements
+      if (!el || el.contains(event.target as Node)) {
+        return;
+      }
+      handler(event);
+    };
+    document.addEventListener(mouseEvent, listener);
+    return () => {
+      document.removeEventListener(mouseEvent, listener);
+    };
+  }, [ref, handler, mouseEvent]);
+}
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
@@ -46,7 +68,7 @@ const spanVariants = {
   exit: { width: 0, opacity: 0 },
 };
 
-const transition = { delay: 0.1, type: "spring", bounce: 0, duration: 0.6 };
+const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export function ExpandableTabs({
   tabs,
@@ -55,7 +77,7 @@ export function ExpandableTabs({
   onChange,
 }: ExpandableTabsProps) {
   const [selected, setSelected] = React.useState<number | null>(null);
-  const outsideClickRef = React.useRef(null);
+  const outsideClickRef = React.useRef<HTMLDivElement>(null);
 
   useOnClickOutside(outsideClickRef, () => {
     setSelected(null);

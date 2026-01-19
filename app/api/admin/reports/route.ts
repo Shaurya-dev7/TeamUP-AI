@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminForApi, logAdminAction, AdminActions } from '@/lib/admin';
 import { createServiceClient } from '@/lib/supabase/service';
+import { AdminReportActionSchema } from '@/lib/validators/admin';
 
 /**
  * GET /api/admin/reports
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' });
 
     if (status !== 'all') {
-      query = query.eq('status', status);
+      query = query.eq('status', status as 'pending' | 'resolved' | 'dismissed');
     }
 
     query = query
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch user profiles for reporters and reported users
     const userIds = new Set<string>();
-    (reports || []).forEach(r => {
+    (reports || []).forEach((r: any) => {
       if (r.reporter_id) userIds.add(r.reporter_id);
       if (r.reported_user_id) userIds.add(r.reported_user_id);
     });
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
-    const reportsWithProfiles = (reports || []).map(r => ({
+    const reportsWithProfiles = (reports || []).map((r: any) => ({
       ...r,
       reporter: profileMap.get(r.reporter_id) || null,
       reportedUser: profileMap.get(r.reported_user_id) || null,
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Admin Reports] Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -114,11 +115,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { reportId, action, reason } = body;
+    const validation = AdminReportActionSchema.safeParse(body);
 
-    if (!reportId || !action) {
-      return NextResponse.json({ error: 'Report ID and action required' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Invalid input', details: validation.error.flatten() }, { status: 400 });
     }
+
+    const { reportId, action, reason } = validation.data;
 
     // Get report details
     const { data: report, error: reportError } = await supabase
@@ -244,6 +247,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Admin Reports Action] Error:', error);
-    return NextResponse.json({ error: 'Action failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

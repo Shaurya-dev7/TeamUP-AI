@@ -1,14 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { GroupChatSchema } from '@/lib/validators/chat';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { name, memberIds } = req.body;
-    
-    if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Group name is required' });
-    if (!Array.isArray(memberIds) || memberIds.length === 0) return res.status(400).json({ error: 'At least one member is required' });
+    const validation = GroupChatSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid input', details: validation.error.flatten() });
+    }
+    const { name, memberIds } = validation.data;
 
     const authHeader = (req.headers.authorization as string) || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
@@ -38,8 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Create group conversation
-    // @ts-ignore
-    const { data: chat, error: chatError } = await (supabase as any).from('conversations').insert({
+    const { data: chat, error: chatError } = await supabase.from('conversations').insert({
         type: 'group',
         title: name,
         // icon_url: ... optional
@@ -59,8 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: pid === userId ? 'admin' : 'member'
     }));
 
-    // @ts-ignore
-    const { error: membersError } = await (supabase as any).from('conversation_participants').insert(membersPayload);
+    const { error: membersError } = await supabase.from('conversation_participants').insert(membersPayload);
     
     if (membersError) {
       console.error('Error adding group members (service):', membersError);
@@ -71,8 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Insert starter message (system-authored, sender_id = null)
     try {
-      // @ts-ignore
-      const { data: template } = await (supabase as any)
+      const { data: template } = await supabase
         .from('chat_starter_templates')
         .select('content')
         .eq('context', 'new_group_chat')
@@ -80,8 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .single();
 
       if (template?.content) {
-        // @ts-ignore
-        await (supabase as any).from('messages').insert({
+        await supabase.from('messages').insert({
           conversation_id: (chat as any).id,
           sender_id: null, // System message - no sender
           content: template.content,
@@ -97,6 +95,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ chat });
   } catch (err) {
     console.error('/api/create-group-chat unexpected error:', err);
-    return res.status(500).json({ error: 'Unexpected server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

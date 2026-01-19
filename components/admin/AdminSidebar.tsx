@@ -54,7 +54,7 @@ export function AdminSidebar({ currentRole }: AdminSidebarProps) {
       <nav className="flex-1 p-4 space-y-1">
         {visibleItems.map(item => {
           const isActive = pathname === item.href || 
-            (item.href !== '/admin' && pathname.startsWith(item.href));
+            (pathname !== null && item.href !== '/admin' && pathname.startsWith(item.href));
           const Icon = item.icon;
 
           return (

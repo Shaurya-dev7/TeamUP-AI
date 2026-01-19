@@ -309,9 +309,9 @@ export default function CreateProfilePage() {
                             onChange={e => handleInputChange("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                          />
                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
-                            {checkingUsername && <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />}
-                            {!checkingUsername && usernameAvailable === true && <Check className="w-5 h-5 text-green-500" />}
-                            {!checkingUsername && usernameAvailable === false && <X className="w-5 h-5 text-red-500" />}
+                            {checkingUsername && <Loader2 className="w-5 h-5 animate-spin text-neutral-400" aria-label="Checking username availability" />}
+                            {!checkingUsername && usernameAvailable === true && <Check className="w-5 h-5 text-green-500" aria-label="Username is available" />}
+                            {!checkingUsername && usernameAvailable === false && <X className="w-5 h-5 text-red-500" aria-label="Username is taken" />}
                          </div>
                      </div>
                      {!checkingUsername && usernameAvailable === false && (
@@ -400,7 +400,7 @@ export default function CreateProfilePage() {
                             />
                         </div>
                         {formData.profile_picture_url && (
-                            <img src={formData.profile_picture_url} alt="Preview" className="w-12 h-12 rounded-full object-cover border border-neutral-200" />
+                            <img src={formData.profile_picture_url} alt="Preview" width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-neutral-200" />
                         )}
                      </div>
 
@@ -548,7 +548,7 @@ export default function CreateProfilePage() {
                     {formData.skills.map(skill => (
                         <span key={skill} className="px-3 py-1 bg-neutral-900 text-white dark:bg-white dark:text-black rounded-lg text-sm font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
                             {skill}
-                            <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-400">&times;</button>
+                            <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-400" aria-label={`Remove ${skill}`}>&times;</button>
                         </span>
                     ))}
                     {formData.skills.length === 0 && (
@@ -588,7 +588,7 @@ export default function CreateProfilePage() {
                     {formData.interests.map(interest => (
                         <span key={interest} className="px-3 py-1 bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300 rounded-lg text-sm font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
                             {interest}
-                            <button type="button" onClick={() => removeInterest(interest)} className="hover:text-pink-900">&times;</button>
+                            <button type="button" onClick={() => removeInterest(interest)} className="hover:text-pink-900" aria-label={`Remove ${interest}`}>&times;</button>
                         </span>
                     ))}
                     {formData.interests.length === 0 && (
@@ -644,6 +644,7 @@ export default function CreateProfilePage() {
                                 type="button" 
                                 onClick={() => removeCertificate(idx)}
                                 className="absolute top-2 right-2 p-2 text-neutral-400 hover:text-red-500 transition-colors"
+                                aria-label="Remove certificate"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>

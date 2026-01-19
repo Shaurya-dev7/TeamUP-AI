@@ -1,11 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServiceClient } from '@/lib/supabase/service';
+import { GroupActionSchema } from '@/lib/validators/chat';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { action, conversationId, targetUserId } = req.body;
+    const validation = GroupActionSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid input', details: validation.error.flatten() });
+    }
+    const { action, conversationId, targetUserId } = validation.data;
     
     // Auth Check
     const authHeader = (req.headers.authorization as string) || '';
@@ -19,6 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = user.id;
 
     // Permissions Check
+    // Get my role
     // Get my role
     const { data: myPartecipation, error: myError } = await supabase
         .from('conversation_participants')
@@ -35,7 +41,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (action === 'leave') {
         // Can always leave (unless maybe last admin? - keeping it simple for now)
-        // @ts-ignore
         const { error } = await supabase
             .from('conversation_participants')
             .delete()
@@ -45,7 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (error) throw error;
         
         // System message
-        // @ts-ignore
         await supabase.from('messages').insert({
             conversation_id: conversationId,
             sender_id: userId,
@@ -60,7 +64,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!isAdmin) return res.status(403).json({ error: 'Only admins can remove members' });
         if (!targetUserId) return res.status(400).json({ error: 'Target user required' });
 
-        // @ts-ignore
         const { error } = await supabase
             .from('conversation_participants')
             .delete()
@@ -70,7 +73,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (error) throw error;
 
          // System message
-         // @ts-ignore
          await supabase.from('messages').insert({
             conversation_id: conversationId,
             sender_id: userId,
@@ -85,7 +87,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!isAdmin) return res.status(403).json({ error: 'Only admins can promote members' });
         if (!targetUserId) return res.status(400).json({ error: 'Target user required' });
 
-        // @ts-ignore
         const { error } = await supabase
             .from('conversation_participants')
             .update({ role: 'admin' })
@@ -99,8 +100,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(400).json({ error: 'Invalid action' });
 
-  } catch (err: any) {
+  } catch (err) {
     console.error('Group action failed:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

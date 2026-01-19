@@ -19,11 +19,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Call a stored procedure or implement logic for team recommendations
   // For now, just return top N recommended profiles (excluding the user)
   const { data: recommendations, error: recError } = await supabase
-    .rpc('recommend_profiles', { p_profile_id: userProfile.id, p_limit: team_size });
+    .rpc('recommend_profiles', { p_profile_id: (userProfile as any).id, p_limit: team_size } as any);
   if (recError) {
     return res.status(500).json({ error: 'Failed to get team recommendations', details: recError.message });
   }
   // Add the user to the start of the team
-  const team = [{ ...userProfile }, ...(recommendations || [])];
+  const team = [{ ...(userProfile as any) }, ...(recommendations || [])];
   res.json({ team });
 }

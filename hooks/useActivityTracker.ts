@@ -26,7 +26,7 @@ export function useActivityTracker() {
 
       try {
         // Use sendBeacon if available for reliability on unload, else fetch
-        if (navigator.sendBeacon) {
+        if (typeof navigator.sendBeacon === 'function') {
             // Need a text/plain or blob payload for sendBeacon to not require CORS preflight sometimes, 
             // but Next.js API handles JSON fine. simpler to use fetch for auth headers.
             // Actually, keep it simple with fetch.
