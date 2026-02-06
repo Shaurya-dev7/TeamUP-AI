@@ -1,3 +1,17 @@
+/**
+ * =============================================================================
+ * TEAM INVITES API - /api/teams/[teamId]/invites
+ * =============================================================================
+ * 
+ * SECURITY: IDOR Prevention
+ * - GET:    Requires 'leader' or 'co_leader' role (view pending invites)
+ * - POST:   Requires 'leader' or 'co_leader' role (send invites)
+ * 
+ * userId is ALWAYS derived from JWT token, NEVER from request body.
+ * invited_by is set to the server-derived userId, not client input.
+ * =============================================================================
+ */
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 

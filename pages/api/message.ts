@@ -1,8 +1,9 @@
-// @ts-nocheck
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { checkProfileCompleteness, INCOMPLETE_PROFILE_ERROR } from '@/lib/profile/completeness';
 import { requireAuth } from '@/lib/utils/auth-guard';
+import { MessageSchema } from '@/lib/validators/message';
+import { logApiError } from '@/lib/utils/error-utils';
 
 // POST: { receiver_id, content }
 // SECURITY: sender_id is ALWAYS derived from auth token, never from body
@@ -14,14 +15,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!user) return; // 401 already sent
   
   const sender_id = user.id; // ALWAYS use auth-derived ID
-  const { receiver_id, content } = req.body;
   
-  // sender_id is no longer accepted from body - ignored even if provided
-  if (!receiver_id || !content) {
-    return res.status(400).json({ error: 'receiver_id and content required' });
+  // Validate & Sanitize Input
+  const validation = MessageSchema.safeParse(req.body);
+  
+  if (!validation.success) {
+     return res.status(400).json({ 
+       error: validation.error.issues[0].message, 
+       details: validation.error.flatten() 
+     });
   }
   
-  const supabase = await createClient();
+  const { receiver_id, content } = validation.data;
+  
+  // Initialize Supabase Admin Client (to bypass RLS for lookups/creations manageable by backend logic)
+  // We trust the `sender_id` because we verified the token in `requireAuth`
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Check sender profile completeness before allowing message
   const { data: senderProfile } = await supabase
@@ -41,68 +53,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // Find existing 1:1 chat between these two users
-  let chatId: string | null = null;
-  const { data: chatMembers, error: chatMembersError } = await supabase
+  // OPTIMIZED: Find existing 1:1 chat between these two users
+  // 1. Get all chat_ids where sender is a member
+  const { data: senderChats, error: senderChatsError } = await supabase
     .from('chat_members')
-    .select('chat_id, profile_id');
-  if (chatMembersError) {
-    return res.status(500).json({ error: 'Failed to query chat members' });
+    .select('chat_id')
+    .eq('user_id', sender_id);
+    
+  if (senderChatsError) {
+    logApiError('Fetch sender chats', senderChatsError, { sender_id });
+    return res.status(500).json({ error: 'Failed to query chats' });
   }
-  // Find chat_id that has both sender and receiver as members and is not a group
-  const chatIdCounts: Record<string, number> = {};
-  for (const member of chatMembers || []) {
-    if (member && typeof member === 'object' && ('profile_id' in member) && ('chat_id' in member)) {
-      if (member.profile_id === sender_id || member.profile_id === receiver_id) {
-        chatIdCounts[member.chat_id] = (chatIdCounts[member.chat_id] || 0) + 1;
-      }
+
+  let chatId: string | null = null;
+  const senderChatIds = (senderChats || []).map(c => c.chat_id);
+
+  if (senderChatIds.length > 0) {
+    // 2. Check if receiver is in any of these chats, AND that chat is NOT a group
+    // We can join or just query chat_members again
+    const { data: commonChats, error: commonChatsError } = await supabase
+      .from('chat_members')
+      .select('chat_id, chats!inner(is_group)')
+      .eq('user_id', receiver_id)
+      .in('chat_id', senderChatIds)
+      .eq('chats.is_group', false) // Ensure it's 1:1
+      .limit(1); // Should only be one
+
+    if (commonChatsError) {
+       // Ignore error, maybe continue to create
+       console.warn("Error finding common chat", commonChatsError);
+    } else if (commonChats && commonChats.length > 0) {
+       chatId = commonChats[0].chat_id;
     }
   }
 
-  let foundChatId: string | null = null;
-  for (const [id, count] of Object.entries(chatIdCounts)) {
-    if (count === 2) {
-      // Check if this chat is not a group
-      const { data: chat, error: chatError } = await supabase
-        .from('chats')
-        .select('id, is_group')
-        .eq('id', id)
-        .eq('is_group', false)
-        .single();
-      if (chat && typeof chat === 'object' && !chat.is_group && 'id' in chat) {
-        foundChatId = chat.id;
-        break;
-      }
-    }
-  }
-  if (foundChatId) {
-    chatId = foundChatId;
-  } else {
-    // Create new chat
+  // Create new chat if none found
+  if (!chatId) {
+    // Transaction-like operations
     const { data: newChat, error: newChatError } = await supabase
       .from('chats')
       .insert([{ is_group: false }])
       .select('id')
       .single();
-    if (newChatError || !newChat || !newChat.id) {
+      
+    if (newChatError || !newChat) {
+      logApiError('Create chat', newChatError);
       return res.status(500).json({ error: 'Failed to create chat' });
     }
+    
     chatId = newChat.id;
-    // Add both users as members
-    await supabase.from('chat_members').insert([
-      { chat_id: chatId, profile_id: sender_id },
-      { chat_id: chatId, profile_id: receiver_id }
+    
+    // Add members
+    const { error: membersError } = await supabase.from('chat_members').insert([
+      { chat_id: chatId, user_id: sender_id, role: 'member' },
+      { chat_id: chatId, user_id: receiver_id, role: 'member' }
     ]);
+    
+    if (membersError) {
+        logApiError('Add chat members', membersError);
+        // Rollback potentially needed, but unlikely to fail if chat created
+        return res.status(500).json({ error: 'Failed to add members' });
+    }
   }
+  
   // Insert message
   const { data: message, error: msgError } = await supabase
     .from('chat_messages')
     .insert([{ chat_id: chatId, sender_id, content }])
     .select('*')
     .single();
+    
   if (msgError) {
     logApiError('Chat message insert', msgError, { chat_id: chatId });
     return res.status(500).json({ error: 'Failed to send message' });
   }
+  
   res.status(201).json({ message });
 }

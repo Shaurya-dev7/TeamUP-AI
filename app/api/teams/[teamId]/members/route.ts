@@ -1,3 +1,17 @@
+/**
+ * =============================================================================
+ * TEAM MEMBERS API - /api/teams/[teamId]/members
+ * =============================================================================
+ * 
+ * SECURITY: IDOR Prevention
+ * - GET:    Requires team membership (any role)
+ * - PATCH:  Requires 'leader' or 'co_leader' role (role changes)
+ * - DELETE: Self-leave allowed; removing others requires 'leader' or 'co_leader'
+ * 
+ * userId is ALWAYS derived from JWT token, NEVER from request body.
+ * =============================================================================
+ */
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 

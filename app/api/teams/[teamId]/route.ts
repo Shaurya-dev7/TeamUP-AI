@@ -1,8 +1,39 @@
+/**
+ * =============================================================================
+ * TEAM API ROUTES - /api/teams/[teamId]
+ * =============================================================================
+ * 
+ * SECURITY: IDOR (Insecure Direct Object Reference) Prevention
+ * 
+ * This file implements strict authorization controls to prevent IDOR attacks:
+ * 
+ * 1. USER IDENTITY: userId is ALWAYS derived from the JWT token via getUser(),
+ *    NEVER from request body, query params, or headers. This prevents ID spoofing.
+ * 
+ * 2. AUTHORIZATION MODEL:
+ *    - GET:    Public info for all; private details (members list) for members only
+ *    - PATCH:  Requires 'leader' or 'co_leader' role in team_members
+ *    - DELETE: Requires 'leader' role ONLY
+ * 
+ * 3. OWNERSHIP VERIFICATION: Before any mutation, we verify the authenticated
+ *    user's role by querying team_members with their server-derived userId.
+ * 
+ * 4. RESPONSE CODES:
+ *    - 401: Missing/invalid authentication token
+ *    - 403: Authenticated but lacks required role (IDOR attempt)
+ *    - 404: Resource not found (also used for closed teams to non-members)
+ * 
+ * RLS Note: Supabase RLS policies provide defense-in-depth, but this API uses
+ * service role key (bypasses RLS) so ALL authorization is enforced at API layer.
+ * =============================================================================
+ */
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { TeamSchema } from "@/lib/validators/team";
 
 type RouteParams = { params: Promise<{ teamId: string }> };
 
@@ -45,7 +76,15 @@ function generateDemoTeam(teamId: number) {
   };
 }
 
-// GET: Get team details
+/**
+ * GET /api/teams/[teamId]
+ * 
+ * SECURITY NOTES:
+ * - Authentication is optional (public discovery allowed)
+ * - userId derived from JWT token only, never from request
+ * - Closed teams return limited info to non-members
+ * - Member list ONLY returned to authenticated team members (IDOR prevention)
+ */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const supabaseAdmin = getSupabaseAdmin();
   try {
@@ -183,7 +222,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH: Update team details (leader/co_leader only)
+/**
+ * PATCH /api/teams/[teamId]
+ * 
+ * SECURITY NOTES (IDOR Prevention):
+ * - REQUIRES authentication (401 if missing)
+ * - userId derived from JWT token ONLY (never from request body)
+ * - REQUIRES 'leader' or 'co_leader' role in team_members table
+ * - Role check uses server-derived userId against team_id from URL
+ * - Returns 403 if user is not authorized (prevents IDOR)
+ */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const supabaseAdmin = getSupabaseAdmin();
   try {
@@ -219,12 +267,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
+    // Validate and sanitize input
     const body = await request.json();
-    const { name, description, goal, max_members, join_mode, roles_needed } = body;
+    const validation = TeamSchema.partial().safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: "Invalid input", 
+        details: validation.error.flatten() 
+      }, { status: 400 });
+    }
+
+    const { name, description, goal, max_members, join_mode, roles_needed } = validation.data;
 
     // Update team
     const updateData: any = {};
-    if (name !== undefined) updateData.name = name.trim();
+    if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (goal !== undefined) updateData.goal = goal;
     if (max_members !== undefined) updateData.max_members = max_members;
@@ -291,7 +349,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE: Soft delete team (leader only)
+/**
+ * DELETE /api/teams/[teamId]
+ * 
+ * SECURITY NOTES (IDOR Prevention):
+ * - REQUIRES authentication (401 if missing)
+ * - userId derived from JWT token ONLY (never from request body)
+ * - REQUIRES 'leader' role ONLY (co_leaders cannot delete)
+ * - Role check uses server-derived userId against team_id from URL
+ * - Returns 403 if user is not the leader (prevents IDOR)
+ * - Soft delete: sets status='deleted' instead of hard delete
+ */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const supabaseAdmin = getSupabaseAdmin();
   try {

@@ -1,3 +1,18 @@
+/**
+ * =============================================================================
+ * TEAM JOIN REQUESTS API - /api/teams/[teamId]/join-requests
+ * =============================================================================
+ * 
+ * SECURITY: IDOR Prevention
+ * - GET:    Requires 'leader' or 'co_leader' role (view pending requests)
+ * - POST:   Requires authentication (submit own request, user_id from JWT)
+ * - PATCH:  Requires 'leader' or 'co_leader' role (accept/reject requests)
+ * 
+ * userId is ALWAYS derived from JWT token, NEVER from request body.
+ * responded_by is set to the server-derived userId when processing requests.
+ * =============================================================================
+ */
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
