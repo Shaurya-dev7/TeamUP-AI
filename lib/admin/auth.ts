@@ -3,7 +3,48 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
 // Admin role hierarchy
-export type AdminRole = 'super_admin' | 'admin' | 'moderator';
+export type AdminRole = 'super_admin' | 'admin' | 'senior_moderator' | 'moderator';
+
+// Role Power Levels mapping (higher number = higher power)
+export const ROLE_POWER: Record<AdminRole, number> = {
+  super_admin: 100,
+  admin: 90,
+  senior_moderator: 70,
+  moderator: 50,
+};
+
+/**
+ * Validates if the actor has permission to promote to the target role.
+ * rule: 
+ *  super_admin -> everyone
+ *  admin -> up to senior_moderator
+ *  senior_moderator -> moderator
+ *  moderator -> none
+ */
+export function canPromote(actorRole: AdminRole, targetRole: AdminRole): boolean {
+  if (actorRole === 'super_admin') return true;
+  if (actorRole === 'admin') {
+    return targetRole === 'senior_moderator' || targetRole === 'moderator';
+  }
+  if (actorRole === 'senior_moderator') {
+    return targetRole === 'moderator';
+  }
+  return false;
+}
+
+/**
+ * Validates if the actor has permission to demote the target role.
+ * rule:
+ *  super_admin -> everyone
+ *  admin -> demote senior_moderator, moderator
+ *  senior_moderator -> demote moderator
+ *  moderator -> none
+ */
+export function canDemote(actorRole: AdminRole, targetRole: AdminRole): boolean {
+  if (actorRole === 'super_admin') return true;
+  // Can only demote someone who has strictly less power
+  return ROLE_POWER[actorRole] > ROLE_POWER[targetRole];
+}
 
 export interface AdminUser {
   id: string;

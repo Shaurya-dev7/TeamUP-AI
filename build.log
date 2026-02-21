@@ -1,0 +1,34 @@
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm.
+npm warn Unknown project config "strictDepBuilds". This will stop working in the next major version of npm.
+
+> nextjs-base-starter@0.1.0 build
+> next build
+
+--------------------------------------------------
+≡ƒöì Checking Environment Variables during Build:
+NEXT_PUBLIC_SUPABASE_URL: Γ£à Found
+NEXT_PUBLIC_SUPABASE_ANON_KEY: Γ£à Found
+--------------------------------------------------
+   Γû▓ Next.js 15.5.7
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+--------------------------------------------------
+≡ƒöì Checking Environment Variables during Build:
+NEXT_PUBLIC_SUPABASE_URL: Γ£à Found
+NEXT_PUBLIC_SUPABASE_ANON_KEY: Γ£à Found
+--------------------------------------------------
+Failed to compile.
+
+./app/admin/admins/page.tsx
+Module not found: Can't resolve '@/components/ui/select'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/admin/admins/page.tsx
+Module not found: Can't resolve '@/components/ui/tooltip'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors

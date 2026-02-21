@@ -19,13 +19,13 @@ interface AdminSidebarProps {
 }
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'moderator'] },
-  { href: '/admin/users', label: 'Users', icon: Users, roles: ['super_admin', 'admin', 'moderator'] },
-  { href: '/admin/teams', label: 'Teams', icon: UsersRound, roles: ['super_admin', 'admin', 'moderator'] },
-  { href: '/admin/reports', label: 'Reports', icon: AlertTriangle, roles: ['super_admin', 'admin', 'moderator'] },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'senior_moderator'] },
+  { href: '/admin/users', label: 'Users', icon: Users, roles: ['super_admin', 'admin', 'senior_moderator'] },
+  { href: '/admin/teams', label: 'Teams', icon: UsersRound, roles: ['super_admin', 'admin', 'senior_moderator'] },
+  { href: '/admin/reports', label: 'Reports', icon: AlertTriangle, roles: ['super_admin', 'admin', 'senior_moderator', 'moderator'] },
   { href: '/admin/system', label: 'System', icon: Settings, roles: ['super_admin'] },
-  { href: '/admin/admins', label: 'Admins', icon: Shield, roles: ['super_admin'] },
-  { href: '/admin/audit', label: 'Audit Logs', icon: ScrollText, roles: ['super_admin', 'admin'] },
+  { href: '/admin/admins', label: 'Admins', icon: Shield, roles: ['super_admin', 'admin'] },
+  { href: '/admin/audit', label: 'Audit Logs', icon: ScrollText, roles: ['super_admin', 'admin', 'senior_moderator'] },
 ];
 
 export function AdminSidebar({ currentRole }: AdminSidebarProps) {

@@ -17,19 +17,19 @@ export type Database = {
       admin_roles: {
         Row: {
           user_id: string
-          role: 'super_admin' | 'admin' | 'moderator'
+          role: 'super_admin' | 'admin' | 'senior_moderator' | 'moderator'
           granted_at: string
           granted_by: string | null
         }
         Insert: {
           user_id: string
-          role: 'super_admin' | 'admin' | 'moderator'
+          role: 'super_admin' | 'admin' | 'senior_moderator' | 'moderator'
           granted_at?: string
           granted_by?: string | null
         }
         Update: {
           user_id?: string
-          role?: 'super_admin' | 'admin' | 'moderator'
+          role?: 'super_admin' | 'admin' | 'senior_moderator' | 'moderator'
           granted_at?: string
           granted_by?: string | null
         }
@@ -84,6 +84,54 @@ export type Database = {
             columns: ["admin_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      admin_activity_logs: {
+        Row: {
+          id: string
+          actor_id: string
+          target_id: string | null
+          action: string
+          old_role: string | null
+          new_role: string | null
+          ip_address: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          actor_id: string
+          target_id?: string | null
+          action: string
+          old_role?: string | null
+          new_role?: string | null
+          ip_address?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          actor_id?: string
+          target_id?: string | null
+          action?: string
+          old_role?: string | null
+          new_role?: string | null
+          ip_address?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_activity_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_activity_logs_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
         ]
