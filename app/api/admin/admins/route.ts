@@ -68,10 +68,27 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { action, userId, role } = body;
+    let { action, userId, role } = body;
 
     if (!action || !userId) {
       return NextResponse.json({ error: 'Action and userId required' }, { status: 400 });
+    }
+
+    // Check if userId is actually a username (not a UUID)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isUUID) {
+       // Lookup user by username
+       const { data: profileObj, error: profileErr } = await supabase
+         .from('profiles')
+         .select('id')
+         .eq('username', userId)
+         .single();
+         
+       if (profileErr || !profileObj) {
+          return NextResponse.json({ error: `User with username '@${userId}' not found.` }, { status: 404 });
+       }
+       
+       userId = profileObj.id; // Override with the actual UUID
     }
 
     // Prevent self-modification

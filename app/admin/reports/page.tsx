@@ -92,27 +92,34 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Content Moderation</h1>
+      {/* Header with Title and Premium Glass Profile indicator */}
+      <div className="flex justify-between items-center backdrop-blur-xl bg-neutral-900/40 p-6 rounded-2xl border border-neutral-800 shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
+            Content <span className="bg-gradient-to-r from-red-500 to-orange-600 font-black text-transparent bg-clip-text">Moderation</span>
+          </h1>
+          <p className="text-neutral-400 mt-2 font-medium tracking-wide text-sm">Review, resolve, and manage user reports.</p>
+        </div>
         <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-[400px]">
-          <TabsList className="grid w-full grid-cols-3 bg-neutral-900">
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="resolved">Resolved</TabsTrigger>
-            <TabsTrigger value="dismissed">Dismissed</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-black/40 border border-neutral-800 p-1 rounded-xl">
+            <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-neutral-800 data-[state=active]:text-white transition-all">Pending</TabsTrigger>
+            <TabsTrigger value="resolved" className="rounded-lg data-[state=active]:bg-neutral-800 data-[state=active]:text-white transition-all">Resolved</TabsTrigger>
+            <TabsTrigger value="dismissed" className="rounded-lg data-[state=active]:bg-neutral-800 data-[state=active]:text-white transition-all">Dismissed</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <div className="rounded-md border border-neutral-800 bg-neutral-900/30">
-        <Table>
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+        <Table className="relative z-10 w-full mb-2">
           <TableHeader>
-            <TableRow className="border-neutral-800 hover:bg-neutral-900/50">
-              <TableHead>Type</TableHead>
-              <TableHead>Reporter</TableHead>
-              <TableHead>Reported User</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="border-neutral-800/50 bg-neutral-900/60 hover:bg-neutral-900/60">
+              <TableHead className="text-neutral-400 font-semibold tracking-wide pl-4">Type</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Reporter</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Reported User</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Reason</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Time</TableHead>
+              <TableHead className="text-right text-neutral-400 font-semibold tracking-wide pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -126,8 +133,16 @@ export default function ReportsPage() {
               </TableRow>
             ) : reports.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-neutral-500">
-                  No reports found.
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+                      <ShieldAlert className="w-8 h-8 text-neutral-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-neutral-300">No Reports Found</h3>
+                      <p className="text-sm text-neutral-500 mt-1 max-w-sm">There are currently no user reports matching your selected filter. Everything looks clean!</p>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -210,14 +225,15 @@ export default function ReportsPage() {
         </Table>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between p-4 border-t border-neutral-800">
-          <div className="text-sm text-neutral-500">
+        <div className="flex items-center justify-between p-4 border-t border-neutral-800 bg-neutral-900/40 relative z-10 w-full">
+          <div className="text-sm font-medium text-neutral-400">
             Page {page} of {pagination.totalPages || 1}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button
               variant="outline"
               size="sm"
+              className="border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800 text-neutral-300 transition-all font-semibold"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -226,6 +242,7 @@ export default function ReportsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800 text-neutral-300 transition-all font-semibold"
               onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
               disabled={page >= pagination.totalPages}
             >

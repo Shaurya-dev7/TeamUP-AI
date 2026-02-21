@@ -38,9 +38,11 @@ async function getDashboardStats() {
   ]);
 
   const flags: Record<string, boolean> = {};
-  (flagsResult.data || []).forEach(f => {
-    flags[f.key] = f.value;
-  });
+  if (!flagsResult.error && flagsResult.data) {
+    flagsResult.data.forEach(f => {
+      flags[f.key] = f.value;
+    });
+  }
 
   const admins = adminsResult.data || [];
   const adminDistribution = {
@@ -55,7 +57,7 @@ async function getDashboardStats() {
     totalTeams: teamsResult.count ?? 0,
     activeUsers24h: activeUsersResult.count ?? 0,
     newSignups7d: newSignupsResult.count ?? 0,
-    pendingReports: reportsResult.count ?? 0,
+    pendingReports: (!reportsResult.error) ? (reportsResult.count ?? 0) : 0,
     systemFlags: flags,
     adminDistribution,
   };

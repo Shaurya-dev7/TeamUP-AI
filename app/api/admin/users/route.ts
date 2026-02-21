@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
         id,
         username,
         name,
-        email,
-        avatar_url,
+        profile_picture_url,
         suspended,
         created_at,
         last_active_at,
@@ -42,13 +41,9 @@ export async function GET(request: NextRequest) {
 
     // Apply search filter
     if (search) {
-      // Search by username, email, or user ID
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search);
-      
       if (isUUID) {
         query = query.eq('id', search);
-      } else if (search.includes('@')) {
-        query = query.ilike('email', `%${search}%`);
       } else {
         query = query.or(`username.ilike.%${search}%,name.ilike.%${search}%`);
       }
@@ -83,7 +78,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      users: users || [],
+      users: (users || []).map((u: any) => ({
+         ...u,
+         avatar_url: u.profile_picture_url
+      })),
       pagination: {
         page,
         limit,

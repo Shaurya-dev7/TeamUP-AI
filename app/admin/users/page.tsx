@@ -109,28 +109,35 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">User Management</h1>
-        <div className="relative w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-neutral-500" />
+      {/* Header with Title and Premium Glass Profile indicator */}
+      <div className="flex justify-between items-center backdrop-blur-xl bg-neutral-900/40 p-6 rounded-2xl border border-neutral-800 shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
+            User <span className="bg-gradient-to-r from-blue-500 to-purple-600 font-black text-transparent bg-clip-text">Management</span>
+          </h1>
+          <p className="text-neutral-400 mt-2 font-medium tracking-wide text-sm">Monitor, manage, and moderate all platform users.</p>
+        </div>
+        <div className="relative w-72">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-500" />
           <Input
-            placeholder="Search users..."
+            placeholder="Search username or UUID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 bg-neutral-900 border-neutral-800"
+            className="pl-10 py-5 bg-black/40 border-neutral-800 rounded-xl focus-visible:ring-1 focus-visible:ring-blue-500/50"
           />
         </div>
       </div>
 
-      <div className="rounded-md border border-neutral-800 bg-neutral-900/30">
-        <Table>
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        <Table className="relative z-10 w-full mb-2">
           <TableHeader>
-            <TableRow className="border-neutral-800 hover:bg-neutral-900/50">
-              <TableHead>User</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Last Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="border-neutral-800/50 bg-neutral-900/60 hover:bg-neutral-900/60">
+              <TableHead className="text-neutral-400 font-semibold tracking-wide pl-4">User</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Status</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Joined</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide">Last Active</TableHead>
+              <TableHead className="text-right text-neutral-400 font-semibold tracking-wide pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -150,49 +157,49 @@ export default function UsersPage() {
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user.id} className="border-neutral-800 hover:bg-neutral-900/50">
-                  <TableCell>
+                <TableRow key={user.id} className="border-neutral-800/50 hover:bg-white/[0.02] transition-colors">
+                  <TableCell className="pl-4">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
+                      <Avatar className="h-10 w-10 border border-neutral-800">
                         <AvatarImage src={user.avatar_url || ''} />
-                        <AvatarFallback>{user.username[0]?.toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="bg-neutral-900 text-neutral-400">{user.username[0]?.toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-medium text-neutral-200">{user.name || 'Unnamed'}</span>
-                        <span className="text-xs text-neutral-500">@{user.username}</span>
+                        <span className="font-medium text-neutral-200">{user.name || 'Unnamed User'}</span>
+                        <span className="text-xs text-neutral-500 font-mono tracking-tight">@{user.username}</span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {user.suspended ? (
-                      <Badge variant="destructive" className="capitalize">
+                    {user.suspended && user.suspended !== 'No' ? (
+                      <Badge variant="outline" className="border-red-500/50 bg-red-500/10 text-red-500">
                         {user.suspended.replace('_', ' ')}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="border-green-800 text-green-400 bg-green-950/30">
+                      <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                         Active
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-neutral-400 text-sm">
+                  <TableCell className="text-neutral-400 font-medium text-sm">
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-neutral-400 text-sm">
                     <div className="flex items-center gap-2">
                       {user.last_active_at ? (
                         <>
-                          <Wifi className="w-3 h-3 text-green-500" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_#10b981]" />
                           {formatDistanceToNow(new Date(user.last_active_at), { addSuffix: true })}
                         </>
                       ) : (
                         <>
-                          <WifiOff className="w-3 h-3 text-neutral-600" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
                           Never
                         </>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-neutral-800">
@@ -265,14 +272,15 @@ export default function UsersPage() {
         </Table>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between p-4 border-t border-neutral-800">
-          <div className="text-sm text-neutral-500">
+        <div className="flex items-center justify-between p-4 border-t border-neutral-800 bg-neutral-900/40 relative z-10 w-full">
+          <div className="text-sm font-medium text-neutral-400">
             Page {page} of {pagination.totalPages || 1}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button
               variant="outline"
               size="sm"
+              className="border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800 text-neutral-300 transition-all font-semibold"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -281,6 +289,7 @@ export default function UsersPage() {
             <Button
               variant="outline"
               size="sm"
+              className="border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800 text-neutral-300 transition-all font-semibold"
               onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
               disabled={page >= pagination.totalPages}
             >

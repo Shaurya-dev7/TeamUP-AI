@@ -32,20 +32,20 @@ interface AuditLogTableProps {
 
 export function AuditLogTable({ logs }: AuditLogTableProps) {
   return (
-    <div className="rounded-md border border-neutral-800">
+    <div className="rounded-xl overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="border-neutral-800 hover:bg-neutral-900/50">
-            <TableHead className="w-[200px]">Admin</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>Target</TableHead>
-            <TableHead>Details</TableHead>
-            <TableHead className="text-right">Time</TableHead>
+          <TableRow className="border-neutral-800/50 bg-neutral-900/60 hover:bg-neutral-900/60">
+            <TableHead className="w-[200px] text-neutral-400 font-semibold tracking-wide">Admin</TableHead>
+            <TableHead className="text-neutral-400 font-semibold tracking-wide">Action</TableHead>
+            <TableHead className="text-neutral-400 font-semibold tracking-wide">Target</TableHead>
+            <TableHead className="text-neutral-400 font-semibold tracking-wide">Details</TableHead>
+            <TableHead className="text-right text-neutral-400 font-semibold tracking-wide">Time</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {logs.map((log) => (
-            <TableRow key={log.id} className="border-neutral-800 hover:bg-neutral-900/50">
+            <TableRow key={log.id} className="border-neutral-800/50 hover:bg-white/[0.02] transition-colors">
               <TableCell className="font-medium">
                 <div className="flex flex-col">
                   <span className="text-neutral-200">
@@ -57,7 +57,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className="border-neutral-700 bg-neutral-900">
+                <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                   {log.action}
                 </Badge>
               </TableCell>
@@ -76,13 +76,13 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <ScrollArea className="h-[60px] w-[300px] rounded border border-neutral-800 bg-neutral-950 p-2">
-                  <pre className="text-[10px] text-neutral-400 font-mono whitespace-pre-wrap">
+                <ScrollArea className="h-[60px] w-[300px] rounded-lg border border-neutral-800/50 bg-black/40 p-2 shadow-inner">
+                  <pre className="text-[10px] text-blue-400/80 font-mono whitespace-pre-wrap">
                     {JSON.stringify(log.metadata, null, 2)}
                   </pre>
                 </ScrollArea>
               </TableCell>
-              <TableCell className="text-right text-neutral-400 text-sm">
+              <TableCell className="text-right font-medium text-neutral-400 text-sm">
                 {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
               </TableCell>
             </TableRow>

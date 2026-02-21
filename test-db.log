@@ -1,0 +1,44 @@
+[dotenv@17.2.3] injecting env (5) from .env.local -- tip: ΓÜÖ∩╕Å  specify custom .env file path with { path: '/custom/path/.env' }
+Checking system_flags...
+system_flags result: {
+  error: {
+    code: 'PGRST205',
+    details: null,
+    hint: "Perhaps you meant the table 'public.chat_messages'",
+    message: "Could not find the table 'public.system_flags' in the schema cache"
+  },
+  data: null,
+  count: null,
+  status: 404,
+  statusText: 'Not Found'
+}
+
+Checking active users (profiles.last_active_at)...
+profiles result: {
+  error: null,
+  data: [
+    {
+      id: '1e6105e7-de3b-4487-9c81-aa03f4ffee6b',
+      suspended: 'No',
+      last_active_at: null,
+      profile_completed: 62
+    }
+  ],
+  count: null,
+  status: 200,
+  statusText: 'OK'
+}
+
+Checking user_reports...
+user_reports result: {
+  error: {
+    code: 'PGRST205',
+    details: null,
+    hint: "Perhaps you meant the table 'public.user_interactions'",
+    message: "Could not find the table 'public.user_reports' in the schema cache"
+  },
+  data: null,
+  count: null,
+  status: 404,
+  statusText: 'Not Found'
+}
