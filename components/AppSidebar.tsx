@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Home, Compass, Users, MessageCircle, Bell, HelpCircle, Mail, LogOut, ChevronRight, User } from "lucide-react";
+import { X, Home, Compass, Users, MessageCircle, Bell, HelpCircle, Mail, LogOut, ChevronRight, User, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import CinematicSwitch from "@/components/ui/cinematic-glow-toggle";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { Session } from "@supabase/supabase-js";
+import { ReportModal } from "@/components/ui/report-modal";
 
 interface AppSidebarProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export default function AppSidebar({ isOpen, onClose, session, profileUsername, 
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const prevPathnameRef = useRef(pathname);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -148,6 +150,18 @@ export default function AppSidebar({ isOpen, onClose, session, profileUsername, 
                   );
                 })}
               </nav>
+
+              <div className="mt-auto pt-4 flex flex-col gap-2">
+                {session?.user && (
+                    <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 text-red-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 font-semibold"
+                    >
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        Report a Bug
+                    </button>
+                )}
+              </div>
             </div>
 
             {/* Footer */}
@@ -167,6 +181,12 @@ export default function AppSidebar({ isOpen, onClose, session, profileUsername, 
                     </button>
                 )}
             </div>
+
+            <ReportModal
+              isOpen={isReportModalOpen}
+              onClose={() => setIsReportModalOpen(false)}
+              type="bug"
+            />
           </motion.div>
         </>
       )}

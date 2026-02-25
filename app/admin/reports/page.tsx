@@ -18,7 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Loader2, AlertTriangle, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 
 interface Report {
-  id: number;
+  id: string;
   reporter: { username: string } | null;
   reportedUser: { username: string } | null;
   reason: string;
@@ -70,7 +70,7 @@ export default function ReportsPage() {
     fetchReports();
   }, [statusFilter, page]);
 
-  const handleAction = async (reportId: number, action: string, reason: string) => {
+  const handleAction = async (reportId: string, action: string, reason: string) => {
     try {
       const res = await fetch('/api/admin/reports', {
         method: 'POST',

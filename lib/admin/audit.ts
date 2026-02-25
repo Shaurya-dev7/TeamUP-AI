@@ -83,6 +83,13 @@ export const AdminActions = {
   DEMOTE_ADMIN: 'demote_admin',
   REMOVE_ADMIN: 'remove_admin',
   
+  // Announcements
+  CREATE_ANNOUNCEMENT: 'create_announcement',
+  DELETE_ANNOUNCEMENT: 'delete_announcement',
+  
+  // Analytics
+  VIEW_ANALYTICS: 'view_analytics',
+  
   // General
   VIEW_AUDIT_LOGS: 'view_audit_logs',
   VIEW_DASHBOARD: 'view_dashboard',

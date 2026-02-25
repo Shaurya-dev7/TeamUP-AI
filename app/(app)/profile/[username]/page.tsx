@@ -2,9 +2,10 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Github, Linkedin, Briefcase, School, Globe, Award, Sparkles, Loader2, MoreHorizontal, Shield, X } from "lucide-react";
+import { Github, Linkedin, Briefcase, School, Globe, Award, Sparkles, Loader2, MoreHorizontal, Shield, X, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "sonner";
+import { ReportModal } from "@/components/ui/report-modal";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -337,6 +338,9 @@ export default function ProfilePage() {
   const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
   const [showBlockMenu, setShowBlockMenu] = useState(false);
 
+  // Report state
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
   // Fetch block status when profile loads
   useEffect(() => {
     if (!profile?.username || !sessionUserId || !currentUsername) return;
@@ -587,6 +591,17 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Report Modal */}
+      {profile && (
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          type="user"
+          reportedUserId={profile.id}
+          reportedUsername={profile.username}
+        />
+      )}
+
       <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 sm:p-8">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div className="flex items-start gap-4">
@@ -791,6 +806,14 @@ export default function ProfilePage() {
                               Block User
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => { setIsReportModalOpen(true); setShowBlockMenu(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                            Report User
+                          </button>
                         </div>
                       </>
                     )}

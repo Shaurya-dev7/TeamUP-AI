@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,13 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmActionModal } from '@/components/admin/ConfirmActionModal';
 import { toast } from 'sonner';
-import { Loader2, Shield, Trash2, ArrowUpCircle, ArrowDownCircle, Info, UserPlus } from 'lucide-react';
+import { Loader2, Shield, Trash2, ArrowDownCircle, Info, UserPlus, Crown, Lock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type AdminRole = 'super_admin' | 'admin' | 'senior_moderator' | 'moderator';
+type AdminRole = 'super_admin' | 'admin' | 'senior_moderator' | 'moderator';
 
-export const ROLE_POWER: Record<AdminRole, number> = {
+const ROLE_POWER: Record<AdminRole, number> = {
   super_admin: 100,
   admin: 90,
   senior_moderator: 70,
@@ -40,25 +35,29 @@ interface AdminUser {
   } | null;
 }
 
-const ROLE_BADGE_STYLES: Record<AdminRole, { className: string; glow: string; desc: string }> = {
+const ROLE_BADGE_STYLES: Record<AdminRole, { className: string; glow: string; desc: string; gradient: string }> = {
   super_admin: {
     className: 'border-amber-500/50 text-amber-400 bg-amber-500/10',
     glow: 'shadow-[0_0_15px_-3px_rgba(245,158,11,0.4)]',
+    gradient: 'from-amber-600/30 to-orange-600/30',
     desc: 'Absolute Control. Can manage everything.'
   },
   admin: {
     className: 'border-rose-500/50 text-rose-400 bg-rose-500/10',
     glow: 'shadow-[0_0_15px_-3px_rgba(244,63,94,0.4)]',
+    gradient: 'from-rose-600/30 to-pink-600/30',
     desc: 'Platform Management. Can manage up to Senior Mods.'
   },
   senior_moderator: {
     className: 'border-blue-500/50 text-blue-400 bg-blue-500/10',
     glow: 'shadow-[0_0_15px_-3px_rgba(59,130,246,0.4)]',
+    gradient: 'from-blue-600/30 to-indigo-600/30',
     desc: 'Elevated Moderation. Can manage Moderators.'
   },
   moderator: {
     className: 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10',
     glow: 'shadow-[0_0_15px_-3px_rgba(16,185,129,0.4)]',
+    gradient: 'from-emerald-600/30 to-teal-600/30',
     desc: 'Operational Moderation. Cannot promote others.'
   }
 };
@@ -79,7 +78,7 @@ export default function AdminsPage() {
       
       const data = await res.json();
       setAdmins(data.admins);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load admin list');
     } finally {
       setLoading(false);
@@ -114,39 +113,58 @@ export default function AdminsPage() {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Access Control</h1>
-          <p className="text-neutral-400 mt-2 font-medium">
-            Manage hierarchical platform administrators and authority matrices.
-          </p>
+        {/* Premium Header */}
+        <div className="relative overflow-hidden backdrop-blur-xl bg-neutral-900/40 p-8 rounded-2xl border border-neutral-800 shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-amber-500/20 rounded-xl">
+                <Crown className="w-5 h-5 text-amber-400" />
+              </div>
+              <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs">
+                <Lock className="w-3 h-3 mr-1" />
+                Super Admin Only
+              </Badge>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
+              Access <span className="bg-gradient-to-r from-amber-500 to-rose-600 font-black text-transparent bg-clip-text">Control</span>
+            </h1>
+            <p className="text-neutral-400 mt-2 font-medium tracking-wide text-sm">
+              Manage hierarchical platform administrators and authority matrices.
+            </p>
+          </div>
         </div>
 
         {/* Add New Admin Form */}
-        <div className="relative overflow-hidden p-6 lg:p-8 rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl shadow-xl">
+        <div className="relative overflow-hidden p-8 rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl shadow-2xl">
           <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-rose-500/20 rounded-lg">
+            <div className="p-2.5 bg-rose-500/20 rounded-xl">
               <UserPlus className="w-5 h-5 text-rose-400" />
             </div>
-            <h2 className="text-xl font-bold text-white">Grant Admin Authority</h2>
+            <div>
+              <h2 className="text-xl font-bold text-white">Grant Admin Authority</h2>
+              <p className="text-xs text-neutral-500 mt-0.5">Enter a username or UUID to promote</p>
+            </div>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 items-end relative z-10 w-full lg:w-2/3">
             <div className="flex-1 space-y-2 w-full">
-              <label className="text-sm font-medium text-neutral-400 ml-1">User Identifier (UUID)</label>
+              <label className="text-sm font-medium text-neutral-400 ml-1">Username or UUID</label>
               <Input
-                placeholder="e.g. 123e4567-e89b-12d3..."
+                placeholder="e.g. @username or 123e4567-e89b-12d3..."
                 value={newAdminId}
                 onChange={(e) => setNewAdminId(e.target.value)}
-                className="bg-black/50 border-neutral-800 h-11 focus-visible:ring-rose-500/50"
+                className="bg-black/40 border-neutral-800 h-12 focus-visible:ring-rose-500/50 text-white"
               />
             </div>
             
             <div className="w-full sm:w-56 space-y-2">
                <label className="text-sm font-medium text-neutral-400 ml-1">Authority Level</label>
                <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AdminRole)}>
-                 <SelectTrigger className="h-11 bg-black/50 border-neutral-800 focus:ring-rose-500/50">
+                 <SelectTrigger className="h-12 bg-black/40 border-neutral-800 focus:ring-rose-500/50">
                     <SelectValue placeholder="Select role" />
                  </SelectTrigger>
                  <SelectContent className="bg-neutral-950 border-neutral-800">
@@ -165,7 +183,7 @@ export default function AdminsPage() {
               requireReason={false}
               onConfirm={() => handleAction(newAdminId, 'promote', selectedRole)}
               trigger={
-                <Button disabled={!newAdminId || !selectedRole} className="h-11 px-6 bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-lg glow">
+                <Button disabled={!newAdminId || !selectedRole} className="h-12 px-8 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-semibold shadow-lg">
                   <Shield className="w-4 h-4 mr-2" />
                   Grant Access
                 </Button>
@@ -173,38 +191,39 @@ export default function AdminsPage() {
             />
           </div>
           
-          <div className="mt-6 flex items-center gap-2 text-sm text-neutral-500 bg-black/30 p-3 rounded-lg border border-neutral-800/50 w-fit">
-             <Info className="w-4 h-4 text-blue-400" />
+          <div className="mt-6 flex items-center gap-2 text-sm text-neutral-500 bg-black/30 p-3 rounded-xl border border-neutral-800/50 w-fit">
+             <Info className="w-4 h-4 text-blue-400 shrink-0" />
              <span>Backend validates all role assignments strictly according to the hierarchical authority matrix.</span>
           </div>
         </div>
 
         {/* Admin List Header Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <Input
             placeholder="Search by name, @username, or UUID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-black/50 border-neutral-800 max-w-sm focus-visible:ring-blue-500/50"
+            className="bg-black/40 border-neutral-800 max-w-sm focus-visible:ring-amber-500/50"
           />
           <Button 
             variant="outline" 
             onClick={() => setSortByRole(!sortByRole)}
-            className="border-neutral-800 bg-neutral-900/50 hover:bg-neutral-800 hover:text-white"
+            className="border-neutral-800 bg-neutral-900/50 hover:bg-neutral-800 hover:text-white font-semibold"
           >
             {sortByRole ? 'Reset Sorting' : 'Sort by Power Level'}
           </Button>
         </div>
 
         {/* Admin List */}
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl overflow-hidden shadow-xl">
-          <Table>
-            <TableHeader className="bg-neutral-900/50">
-              <TableRow className="border-neutral-800 hover:bg-transparent">
-                <TableHead className="font-semibold text-neutral-300">User Identity</TableHead>
-                <TableHead className="font-semibold text-neutral-300">Role & Power</TableHead>
-                <TableHead className="font-semibold text-neutral-300">Granted On</TableHead>
-                <TableHead className="text-right font-semibold text-neutral-300">Actions</TableHead>
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl overflow-hidden shadow-2xl relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+          <Table className="relative z-10">
+            <TableHeader>
+              <TableRow className="border-neutral-800/50 bg-neutral-900/60 hover:bg-neutral-900/60">
+                <TableHead className="font-semibold text-neutral-400 tracking-wide pl-6">User Identity</TableHead>
+                <TableHead className="font-semibold text-neutral-400 tracking-wide">Role & Power</TableHead>
+                <TableHead className="font-semibold text-neutral-400 tracking-wide">Granted On</TableHead>
+                <TableHead className="text-right font-semibold text-neutral-400 tracking-wide pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,8 +231,8 @@ export default function AdminsPage() {
                 <TableRow>
                   <TableCell colSpan={4} className="h-32 text-center">
                     <div className="flex justify-center flex-col items-center gap-2">
-                      <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-                      <span className="text-sm text-neutral-500 font-medium tracking-wide">Synchronizing Authority Matrix...</span>
+                      <Loader2 className="w-7 h-7 animate-spin text-amber-500" />
+                      <span className="text-sm text-neutral-500 font-medium">Synchronizing Authority Matrix...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -240,12 +259,12 @@ export default function AdminsPage() {
                 }
 
                 return filtered.map((admin) => (
-                  <TableRow key={admin.user_id} className="border-neutral-800 hover:bg-white/[0.02] transition-colors group">
-                    <TableCell>
+                  <TableRow key={admin.user_id} className="border-neutral-800/50 hover:bg-white/[0.02] transition-colors">
+                    <TableCell className="pl-6">
                     <div className="flex items-center gap-4">
-                      <Avatar className="h-10 w-10 border border-neutral-800 shadow-md">
+                      <Avatar className={`h-10 w-10 border border-neutral-800 shadow-md`}>
                         <AvatarImage src={admin.profile?.avatar_url || ''} />
-                        <AvatarFallback className="bg-neutral-800 text-neutral-300 font-medium">
+                        <AvatarFallback className={`bg-gradient-to-br ${ROLE_BADGE_STYLES[admin.role].gradient} text-neutral-200 font-bold`}>
                            {admin.profile?.username?.[0]?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
@@ -254,7 +273,7 @@ export default function AdminsPage() {
                           {admin.profile?.name || 'Unknown User'}
                         </span>
                         <span className="text-xs text-neutral-500 font-mono mt-0.5">
-                          {admin.user_id}
+                          @{admin.profile?.username || admin.user_id.slice(0, 8)}
                         </span>
                       </div>
                     </div>
@@ -290,9 +309,8 @@ export default function AdminsPage() {
                     })}
                   </TableCell>
                   
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
-                      {/* Demote visually represented as a quick action if possible (depends on authority, will be rejected by backend if unauthorized) */}
                       {admin.role !== 'moderator' && (
                          <ConfirmActionModal
                             title="Demote Admin"

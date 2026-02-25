@@ -1,38 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  Search, 
-  MoreHorizontal, 
-  ShieldAlert, 
-  ShieldBan, 
-  UserX, 
-  LogOut, 
-  RotateCcw,
-  Loader2,
-  CheckCircle2,
-  Wifi,
-  WifiOff
+  Search, MoreHorizontal, ShieldAlert, ShieldBan, UserX, LogOut, 
+  RotateCcw, Loader2, CheckCircle2, Eye, EyeOff, Trash2, Edit3
 } from 'lucide-react';
 import { ConfirmActionModal } from '@/components/admin/ConfirmActionModal';
+import { UserDetailModal } from '@/components/admin/UserDetailModal';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -50,13 +34,13 @@ interface User {
 }
 
 export default function UsersPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams?.get('search') || '');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -73,7 +57,7 @@ export default function UsersPage() {
       const data = await res.json();
       setUsers(data.users);
       setPagination(data.pagination);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -108,61 +92,73 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header with Title and Premium Glass Profile indicator */}
-      <div className="flex justify-between items-center backdrop-blur-xl bg-neutral-900/40 p-6 rounded-2xl border border-neutral-800 shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
-            User <span className="bg-gradient-to-r from-blue-500 to-purple-600 font-black text-transparent bg-clip-text">Management</span>
-          </h1>
-          <p className="text-neutral-400 mt-2 font-medium tracking-wide text-sm">Monitor, manage, and moderate all platform users.</p>
-        </div>
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-500" />
-          <Input
-            placeholder="Search username or UUID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 py-5 bg-black/40 border-neutral-800 rounded-xl focus-visible:ring-1 focus-visible:ring-blue-500/50"
-          />
+    <div className="space-y-8">
+      {/* Premium Header */}
+      <div className="relative overflow-hidden backdrop-blur-xl bg-neutral-900/40 p-8 rounded-2xl border border-neutral-800 shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
+              User <span className="bg-gradient-to-r from-blue-500 to-purple-600 font-black text-transparent bg-clip-text">Management</span>
+            </h1>
+            <p className="text-neutral-400 mt-2 font-medium tracking-wide text-sm">Monitor, manage, and moderate all platform users.</p>
+          </div>
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-4 top-3.5 h-4 w-4 text-neutral-500" />
+            <Input
+              placeholder="Search username or UUID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-11 py-5 bg-black/40 border-neutral-800 rounded-xl focus-visible:ring-1 focus-visible:ring-blue-500/50 text-white placeholder:text-neutral-500"
+            />
+          </div>
         </div>
       </div>
 
+      {/* Table */}
       <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 backdrop-blur-xl shadow-2xl overflow-hidden relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-        <Table className="relative z-10 w-full mb-2">
+        <Table className="relative z-10 w-full">
           <TableHeader>
             <TableRow className="border-neutral-800/50 bg-neutral-900/60 hover:bg-neutral-900/60">
-              <TableHead className="text-neutral-400 font-semibold tracking-wide pl-4">User</TableHead>
+              <TableHead className="text-neutral-400 font-semibold tracking-wide pl-6">User</TableHead>
               <TableHead className="text-neutral-400 font-semibold tracking-wide">Status</TableHead>
               <TableHead className="text-neutral-400 font-semibold tracking-wide">Joined</TableHead>
               <TableHead className="text-neutral-400 font-semibold tracking-wide">Last Active</TableHead>
-              <TableHead className="text-right text-neutral-400 font-semibold tracking-wide pr-4">Actions</TableHead>
+              <TableHead className="text-right text-neutral-400 font-semibold tracking-wide pr-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <div className="flex justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />
+                <TableCell colSpan={5} className="h-32 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
+                    <span className="text-sm text-neutral-500 font-medium">Loading users...</span>
                   </div>
                 </TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-neutral-500">
+                <TableCell colSpan={5} className="h-32 text-center text-neutral-500">
                   No users found matching your search.
                 </TableCell>
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user.id} className="border-neutral-800/50 hover:bg-white/[0.02] transition-colors">
-                  <TableCell className="pl-4">
+                <TableRow
+                  key={user.id}
+                  className="border-neutral-800/50 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                  onClick={() => setSelectedUserId(user.id)}
+                >
+                  <TableCell className="pl-6">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border border-neutral-800">
+                      <Avatar className="h-10 w-10 border border-neutral-800 shadow-md">
                         <AvatarImage src={user.avatar_url || ''} />
-                        <AvatarFallback className="bg-neutral-900 text-neutral-400">{user.username[0]?.toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600/30 to-purple-600/30 text-neutral-300 font-medium">
+                          {user.username[0]?.toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="font-medium text-neutral-200">{user.name || 'Unnamed User'}</span>
@@ -172,7 +168,7 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>
                     {user.suspended && user.suspended !== 'No' ? (
-                      <Badge variant="outline" className="border-red-500/50 bg-red-500/10 text-red-500">
+                      <Badge variant="outline" className="border-red-500/50 bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]">
                         {user.suspended.replace('_', ' ')}
                       </Badge>
                     ) : (
@@ -199,22 +195,22 @@ export default function UsersPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right pr-4">
+                  <TableCell className="text-right pr-6" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-neutral-800">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-neutral-900 border-neutral-800">
+                      <DropdownMenuContent align="end" className="bg-neutral-900 border-neutral-800 w-48">
                         <ConfirmActionModal
                           title="Soft Ban User"
-                          description="This will restrict the user's access but verify they can still login. They will be marked as suspended."
+                          description="This will restrict the user's access. They can still login but with limited functionality."
                           actionLabel="Soft Ban"
                           variant="destructive"
                           onConfirm={(reason) => handleAction(user.id, 'soft_ban', reason)}
                           trigger={
-                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 hover:text-red-400 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-red-400">
+                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 text-orange-400 hover:text-orange-300">
                               <ShieldAlert className="mr-2 h-4 w-4" />
                               Soft Ban
                             </div>
@@ -228,9 +224,23 @@ export default function UsersPage() {
                           variant="destructive"
                           onConfirm={(reason) => handleAction(user.id, 'hard_ban', reason)}
                           trigger={
-                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 hover:text-red-500 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-red-500">
+                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 text-red-400 hover:text-red-300">
                               <ShieldBan className="mr-2 h-4 w-4" />
                               Hard Ban
+                            </div>
+                          }
+                        />
+
+                        <ConfirmActionModal
+                          title="Shadow Ban User"
+                          description="The user won't know they are banned. Their content will be invisible to others."
+                          actionLabel="Shadow Ban"
+                          variant="destructive"
+                          onConfirm={(reason) => handleAction(user.id, 'shadow_ban', reason)}
+                          trigger={
+                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 text-purple-400 hover:text-purple-300">
+                              <EyeOff className="mr-2 h-4 w-4" />
+                              Shadow Ban
                             </div>
                           }
                         />
@@ -241,9 +251,23 @@ export default function UsersPage() {
                           actionLabel="Force Logout"
                           onConfirm={(reason) => handleAction(user.id, 'force_logout', reason)}
                           trigger={
-                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 hover:text-neutral-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 text-neutral-300 hover:text-white">
                               <LogOut className="mr-2 h-4 w-4" />
                               Force Logout
+                            </div>
+                          }
+                        />
+
+                        <ConfirmActionModal
+                          title="Delete Account"
+                          description="DANGER: This will permanently delete the user from the database. This action cannot be undone. Requires super_admin."
+                          actionLabel="Delete Forever"
+                          variant="destructive"
+                          onConfirm={(reason) => handleAction(user.id, 'delete_account', reason)}
+                          trigger={
+                            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 text-red-500 hover:text-red-400">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Account
                             </div>
                           }
                         />
@@ -255,7 +279,7 @@ export default function UsersPage() {
                             actionLabel="Unban"
                             onConfirm={(reason) => handleAction(user.id, 'unban', reason)}
                             trigger={
-                              <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 hover:text-green-400 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-green-400">
+                              <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-800 text-green-400 hover:text-green-300">
                                 <CheckCircle2 className="mr-2 h-4 w-4" />
                                 Unban
                               </div>
@@ -272,9 +296,11 @@ export default function UsersPage() {
         </Table>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between p-4 border-t border-neutral-800 bg-neutral-900/40 relative z-10 w-full">
+        <div className="flex items-center justify-between p-5 border-t border-neutral-800/50 bg-neutral-900/40 relative z-10 w-full">
           <div className="text-sm font-medium text-neutral-400">
-            Page {page} of {pagination.totalPages || 1}
+            Showing <span className="text-white font-bold">{users.length}</span> of{' '}
+            <span className="text-white font-bold">{pagination.total}</span> users
+            <span className="text-neutral-600 ml-2">• Page {page} of {pagination.totalPages || 1}</span>
           </div>
           <div className="flex gap-3">
             <Button
@@ -298,6 +324,13 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* User Detail Modal */}
+      <UserDetailModal
+        userId={selectedUserId}
+        open={!!selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+      />
     </div>
   );
 }
