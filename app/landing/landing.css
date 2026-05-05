@@ -1,0 +1,285 @@
+/* ===== Landing Page — Scoped Styles ===== */
+
+/* Palette */
+:root {
+  --landing-bg: #000000;
+  --landing-bg-elevated: #0a0a0a;
+  --landing-bg-card: #111111;
+  --landing-text: #ffffff;
+  --landing-text-muted: #999999;
+  --landing-accent: #e5a54f;
+  --landing-accent-hover: #f0b860;
+  --landing-border: rgba(229, 165, 79, 0.25);
+  --landing-border-subtle: rgba(255, 255, 255, 0.08);
+  --landing-section-py: clamp(80px, 12vw, 200px);
+}
+
+/* ===== 3D Cube ===== */
+
+.cube-wrapper {
+  perspective: 800px;
+  width: 200px;
+  height: 200px;
+}
+
+.cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: rotateCube 10s linear infinite;
+}
+
+.cube-face {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border: 1.5px solid var(--landing-accent);
+  background: rgba(229, 165, 79, 0.04);
+  backdrop-filter: blur(2px);
+}
+
+.cube-face--front {
+  transform: translateZ(100px);
+}
+.cube-face--back {
+  transform: rotateY(180deg) translateZ(100px);
+}
+.cube-face--right {
+  transform: rotateY(90deg) translateZ(100px);
+}
+.cube-face--left {
+  transform: rotateY(-90deg) translateZ(100px);
+}
+.cube-face--top {
+  transform: rotateX(90deg) translateZ(100px);
+}
+.cube-face--bottom {
+  transform: rotateX(-90deg) translateZ(100px);
+}
+
+@keyframes rotateCube {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  100% {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
+}
+
+/* Small cube variant */
+.cube-wrapper--sm {
+  width: 120px;
+  height: 120px;
+}
+
+.cube-wrapper--sm .cube-face {
+  width: 120px;
+  height: 120px;
+}
+
+.cube-wrapper--sm .cube-face--front {
+  transform: translateZ(60px);
+}
+.cube-wrapper--sm .cube-face--back {
+  transform: rotateY(180deg) translateZ(60px);
+}
+.cube-wrapper--sm .cube-face--right {
+  transform: rotateY(90deg) translateZ(60px);
+}
+.cube-wrapper--sm .cube-face--left {
+  transform: rotateY(-90deg) translateZ(60px);
+}
+.cube-wrapper--sm .cube-face--top {
+  transform: rotateX(90deg) translateZ(60px);
+}
+.cube-wrapper--sm .cube-face--bottom {
+  transform: rotateX(-90deg) translateZ(60px);
+}
+
+/* ===== Section spacing ===== */
+
+.landing-section {
+  padding-top: var(--landing-section-py);
+  padding-bottom: var(--landing-section-py);
+  position: relative;
+}
+
+/* ===== Hover utilities ===== */
+
+.landing-card {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.landing-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 60px rgba(229, 165, 79, 0.08);
+}
+
+.landing-link {
+  transition: color 0.25s ease;
+}
+
+.landing-link:hover {
+  color: var(--landing-accent);
+}
+
+/* ===== Button ===== */
+
+.landing-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: 1.5px solid var(--landing-accent);
+  color: var(--landing-accent);
+  background: transparent;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+.landing-btn:hover {
+  background: var(--landing-accent);
+  color: #000000;
+}
+
+.landing-btn--filled {
+  background: var(--landing-accent);
+  color: #000000;
+}
+
+.landing-btn--filled:hover {
+  background: var(--landing-accent-hover);
+}
+
+/* ===== Form inputs ===== */
+
+.landing-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--landing-border-subtle);
+  padding: 12px 0;
+  color: var(--landing-text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.landing-input:focus {
+  border-bottom-color: var(--landing-accent);
+}
+
+.landing-input::placeholder {
+  color: var(--landing-text-muted);
+}
+
+/* ===== Gold icon squares ===== */
+
+.gold-square {
+  width: 8px;
+  height: 8px;
+  background: var(--landing-accent);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* ===== Divider line ===== */
+
+.landing-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--landing-border-subtle);
+}
+
+/* ===== Scrollbar hide ===== */
+
+.landing-page {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.landing-page::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== Responsive ===== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .features-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .how-grid {
+    grid-template-columns: 1fr !important;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .locations-grid {
+    grid-template-columns: 1fr !important;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .partners-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  :root {
+    --landing-section-py: clamp(60px, 10vw, 120px);
+  }
+
+  /* Hide hero cube on mobile */
+  .hero-cube {
+    display: none;
+  }
+
+  /* Statement: stack vertically */
+  #statement > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  .statement-visual {
+    display: none !important;
+  }
+
+  /* Features: single column */
+  .features-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* CTA: stack vertically */
+  #contact > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Navbar: hide links, keep logo + contact */
+  nav > div:first-of-type {
+    display: none;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .partners-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .landing-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { skeletonShimmerClass } from "@/lib/motion";
 
 function Skeleton({
   className,
@@ -7,7 +8,7 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-neutral-200/50 dark:bg-neutral-800/50", className)}
+      className={cn("rounded-md", skeletonShimmerClass, className)}
       {...props}
     />
   );

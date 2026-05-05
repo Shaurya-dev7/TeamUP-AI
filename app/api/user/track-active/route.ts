@@ -1,18 +1,19 @@
+import { getUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/database.types';
 
 export async function POST(request: Request) {
-  const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const user = await getUser();
 
-  if (authError || !user) {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const supabase = (await createClient()) as unknown as SupabaseClient<Database>;
+
   // Update last_active_at
-  // We use current timestamp.
   const { error } = await supabase
     .from('profiles')
     .update({ last_active_at: new Date().toISOString() })

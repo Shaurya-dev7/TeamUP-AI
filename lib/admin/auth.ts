@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getUser } from '@/lib/auth';
 
 // Admin role hierarchy
 export type AdminRole = 'super_admin' | 'admin' | 'senior_moderator' | 'moderator';
@@ -13,14 +13,6 @@ export const ROLE_POWER: Record<AdminRole, number> = {
   moderator: 50,
 };
 
-/**
- * Validates if the actor has permission to promote to the target role.
- * rule: 
- *  super_admin -> everyone
- *  admin -> up to senior_moderator
- *  senior_moderator -> moderator
- *  moderator -> none
- */
 export function canPromote(actorRole: AdminRole, targetRole: AdminRole): boolean {
   if (actorRole === 'super_admin') return true;
   if (actorRole === 'admin') {
@@ -32,17 +24,8 @@ export function canPromote(actorRole: AdminRole, targetRole: AdminRole): boolean
   return false;
 }
 
-/**
- * Validates if the actor has permission to demote the target role.
- * rule:
- *  super_admin -> everyone
- *  admin -> demote senior_moderator, moderator
- *  senior_moderator -> demote moderator
- *  moderator -> none
- */
 export function canDemote(actorRole: AdminRole, targetRole: AdminRole): boolean {
   if (actorRole === 'super_admin') return true;
-  // Can only demote someone who has strictly less power
   return ROLE_POWER[actorRole] > ROLE_POWER[targetRole];
 }
 
@@ -52,18 +35,11 @@ export interface AdminUser {
   role: AdminRole;
 }
 
-/**
- * Get the current user's admin role.
- * Returns null if user is not an admin.
- * NEVER cache this - always check fresh.
- */
 export async function getAdminRole(): Promise<{ user: AdminUser } | null> {
-  const supabase = await createClient();
+  // Use centralized getUser utility
+  const user = await getUser();
   
-  // Always use getUser() for secure server-side auth
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
-  if (authError || !user) {
+  if (!user) {
     return null;
   }
 
@@ -89,68 +65,41 @@ export async function getAdminRole(): Promise<{ user: AdminUser } | null> {
   };
 }
 
-/**
- * Require admin access. Returns 404 if not admin.
- * Use this in Server Components and API routes.
- * This is the PRIMARY guard for admin pages.
- */
 export async function requireAdmin(): Promise<AdminUser> {
   const result = await getAdminRole();
   
   if (!result) {
-    // Return 404 to hide admin existence
     notFound();
   }
 
   return result.user;
 }
 
-/**
- * Require super_admin access. Returns 404 if not super_admin.
- * Use this for sensitive operations like admin management.
- */
 export async function requireSuperAdmin(): Promise<AdminUser> {
   const result = await getAdminRole();
   
   if (!result || result.user.role !== 'super_admin') {
-    // Return 404 to hide admin existence
     notFound();
   }
 
   return result.user;
 }
 
-/**
- * Check if current user is admin (for conditional rendering).
- * Does NOT throw - returns boolean.
- */
 export async function isAdmin(): Promise<boolean> {
   const result = await getAdminRole();
   return result !== null;
 }
 
-/**
- * Check if current user is super_admin.
- * Does NOT throw - returns boolean.
- */
 export async function isSuperAdmin(): Promise<boolean> {
   const result = await getAdminRole();
   return result?.user.role === 'super_admin';
 }
 
-/**
- * Verify admin access for API routes.
- * Returns the admin user or null (caller handles 404 response).
- */
 export async function verifyAdminForApi(): Promise<AdminUser | null> {
   const result = await getAdminRole();
   return result?.user ?? null;
 }
 
-/**
- * Verify super_admin access for API routes.
- * Returns the admin user or null (caller handles 404 response).
- */
 export async function verifySuperAdminForApi(): Promise<AdminUser | null> {
   const result = await getAdminRole();
   if (!result || result.user.role !== 'super_admin') {

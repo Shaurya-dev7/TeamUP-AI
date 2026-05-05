@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const user = await getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const supabase = await createClient();
 
   try {
     const body = await request.json();
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { error } = await (supabase as any)
       .from('user_reports')
       .insert({
-        reporter_id: session.user.id,
+        reporter_id: user.id,
         reported_user_id: type === 'user' ? reported_user_id : null,
         reason,
         description,
